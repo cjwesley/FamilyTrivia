@@ -28,7 +28,7 @@ All tables in scope. Names indicative; final names get the scope prefix.
 | **Game** | code (4-char), host (user ref), mode (`uniform` / `adaptive`), categories, question_count, seconds_per_question, state (`lobby` / `in_question` / `reveal` / `finished`), current_round, question_started_at, winner (user ref) | One game session |
 | **Game Player** | game (ref), user (ref), score, correct_count, place | Membership + in-game score |
 | **Game Question** | game (ref), round, question (ref), player (ref, empty in uniform mode) | Questions selected for the game, per player in adaptive mode |
-| **Response** | game (ref), player (ref), question (ref), option (ref), correct (bool), answer_time_ms, points | One answer. Unique per (game, player, round); first write wins |
+| **Response** | game (ref), player (ref), round, question (ref), option (ref), correct (bool), answer_time_ms, points | One answer. Unique per (game, player, round); first write wins |
 | **Player Profile** | user (ref), nickname, avatar_source (`gallery` / `upload` / `sn_photo`), avatar attachment, per-category skill override | Player identity & preferences |
 | **Skill Rating** | user (ref), category (ref), rolling_accuracy, sample_count | Auto-computed skill per category, fed by game AND practice answers |
 | **Player Stats** | user (ref), total_wins, total_points, total_correct, longest_win_streak, current_win_streak | Denormalized leaderboard row |
@@ -47,7 +47,7 @@ All tables in scope. Names indicative; final names get the scope prefix.
 ### Question selection (at Start)
 - **Uniform (Everyone Same):** N shuffled questions from the chosen categories, mixed difficulty; one Game Question row per round.
 - **Adaptive (Skill-Matched):** one Game Question row per round *per player*, drawn at that player's skill level for the category — auto rating unless a manual override exists. All players play round *k* simultaneously on different questions.
-- Both modes exclude questions a player answered recently (via Response history).
+- Both modes exclude questions a player answered in the last 90 days (via Response history); if that exhausts the eligible pool, the exclusion window shrinks until enough questions qualify.
 - Questions come only from the `game` pool; practice pool is separate.
 
 ### Rounds
