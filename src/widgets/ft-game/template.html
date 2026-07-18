@@ -1,0 +1,111 @@
+<div class="ft-app" ng-if="!c.st.error">
+
+  <!-- LOBBY -->
+  <div ng-if="c.st.state === 'lobby'">
+    <div class="ft-title">Game Lobby</div>
+    <div class="ft-card" style="text-align:center;">
+      <div class="ft-dim">Join code</div>
+      <div class="ft-code">{{c.st.code}}</div>
+      <img ng-src="{{c.qrUrl()}}" style="border-radius:12px;margin-top:8px;" alt="QR to join"/>
+      <div class="ft-dim" style="margin-top:6px;">{{c.st.mode === 'adaptive' ? 'Skill-Matched' : 'Everyone Same'}} · {{c.st.totalRounds}} questions</div>
+    </div>
+    <div class="ft-card">
+      <div class="ft-row" ng-repeat="p in c.st.players"
+           ng-class="{'ft-champ': p.userId === c.st.champion}">
+        <div class="ft-avatar" style="position:relative;" ng-bind-html="c.trust(c.cards[p.userId].avatarHtml)">
+        </div>
+        <div class="ft-grow">{{c.cards[p.userId].nickname}} <span ng-if="p.userId === c.st.champion">👑</span></div>
+        <div class="ft-dim" ng-if="p.userId === c.st.host">host</div>
+      </div>
+    </div>
+    <button class="ft-btn" ng-if="c.st.isHost" ng-click="c.start()"
+            ng-disabled="c.st.players.length < 1">Start Game</button>
+    <div class="ft-dim" style="text-align:center;" ng-if="!c.st.isHost">Waiting for host to start…</div>
+  </div>
+
+  <!-- QUESTION -->
+  <div ng-if="c.st.state === 'in_question'">
+    <div class="ft-row">
+      <div class="ft-dim">Round {{c.st.round}}/{{c.st.totalRounds}}</div>
+      <div class="ft-grow"></div>
+      <div style="font-weight:800;font-size:20px;">{{c.remaining}}s</div>
+    </div>
+    <div class="ft-timerbar"><div ng-style="{width: c.pct + '%'}"></div></div>
+    <div class="ft-card" style="margin-top:12px;">
+      <div class="ft-dim">{{c.st.question.icon}} {{c.st.question.category}} · difficulty {{c.st.question.difficulty}}/5</div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px;">{{c.st.question.text}}</div>
+    </div>
+    <div ng-if="!c.st.answered && !c.selected">
+      <button class="ft-btn ft-option" ng-repeat="o in c.st.question.options"
+              ng-click="c.answer(o.id)">{{o.text}}</button>
+    </div>
+    <div ng-if="c.st.answered || c.selected" class="ft-card" style="text-align:center;">
+      <div class="ft-pop" style="font-size:40px;">🔒</div>
+      <div>Answer locked in! Waiting for the others…</div>
+    </div>
+  </div>
+
+  <!-- REVEAL -->
+  <div ng-if="c.st.state === 'reveal'">
+    <div class="ft-title">Round {{c.st.round}} results</div>
+    <div class="ft-card" style="text-align:center;">
+      <div class="ft-dim">Correct answer</div>
+      <div style="font-size:22px;font-weight:800;color:var(--ft-green);">{{c.st.correctOption.text}}</div>
+      <div class="ft-pop" style="font-size:34px;margin-top:6px;"
+           ng-if="c.myReveal()">{{c.myReveal().correct ? '✅ +' + c.myReveal().points : '❌ 0'}}</div>
+      <div class="ft-dim" ng-if="!c.myReveal()">⏰ Time ran out</div>
+    </div>
+    <div class="ft-card">
+      <div class="ft-row" ng-repeat="p in c.st.players | orderBy:'-score'">
+        <div class="ft-medal">{{$index === 0 ? '🥇' : $index === 1 ? '🥈' : $index === 2 ? '🥉' : ''}}</div>
+        <div class="ft-avatar" ng-bind-html="c.trust(c.cards[p.userId].avatarHtml)"></div>
+        <div class="ft-grow">{{c.cards[p.userId].nickname}}</div>
+        <div style="font-weight:800;">{{p.score}}</div>
+      </div>
+    </div>
+    <button class="ft-btn" ng-if="c.st.isHost" ng-click="c.next()">
+      {{c.st.round < c.st.totalRounds ? 'Next Question →' : 'Final Results →'}}
+    </button>
+  </div>
+
+  <!-- PODIUM -->
+  <div ng-if="c.st.state === 'finished'">
+    <div class="ft-confetti"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="ft-title">🏁 Final Results</div>
+    <div class="ft-card" style="text-align:center;" ng-if="c.st.podium.length">
+      <div class="ft-pop" style="font-size:56px;">🏆</div>
+      <div class="ft-podium-1">{{c.cards[c.st.winner].nickname}} wins!</div>
+      <div style="color:gold;font-weight:700;"
+           ng-if="c.st.previousChampion && c.st.winner !== c.st.previousChampion">👑 New champion!</div>
+    </div>
+    <div class="ft-card" ng-if="c.st.fastestFinger || c.st.bestRun">
+      <div class="ft-row" ng-if="c.st.fastestFinger">
+        <div class="ft-medal">⚡</div>
+        <div class="ft-grow">Fastest finger: <b>{{c.cards[c.st.fastestFinger.userId].nickname}}</b></div>
+        <div class="ft-dim">{{c.st.fastestFinger.avgSec}}s avg</div>
+      </div>
+      <div class="ft-row" ng-if="c.st.bestRun">
+        <div class="ft-medal">🔥</div>
+        <div class="ft-grow">Hot streak: <b>{{c.cards[c.st.bestRun.userId].nickname}}</b></div>
+        <div class="ft-dim">{{c.st.bestRun.len}} in a row</div>
+      </div>
+    </div>
+    <div class="ft-card">
+      <div class="ft-row" ng-repeat="p in c.st.podium">
+        <div class="ft-medal">{{p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : p.place === 3 ? '🥉' : p.place}}</div>
+        <div class="ft-avatar" ng-bind-html="c.trust(c.cards[p.userId].avatarHtml)"></div>
+        <div class="ft-grow">{{c.cards[p.userId].nickname}}</div>
+        <div>
+          <div style="font-weight:800;">{{p.score}}</div>
+          <div class="ft-dim">{{p.correct}} correct</div>
+        </div>
+      </div>
+    </div>
+    <a class="ft-btn" href="?id=ft_home">Play Again</a>
+    <a class="ft-btn ft-secondary" href="?id=ft_leaderboard">Leaderboard</a>
+  </div>
+</div>
+<div class="ft-app" ng-if="c.st.error">
+  <div class="ft-card">{{c.st.error}}</div>
+  <a class="ft-btn" href="?id=ft_home">← Home</a>
+</div>
