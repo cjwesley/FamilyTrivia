@@ -4,22 +4,25 @@
 
 **Goal:** A family trivia game running entirely on the company ServiceNow instance — Service Portal UI at `/trivia`, real-time multiplayer from phones, two game modes, practice mode, leaderboards, avatars, reigning-champion treatment.
 
-**Architecture:** One ServiceNow scoped app. All source lives in this git repo as files; a small Node toolchain (`tools/`) pushes each artifact to the instance via the REST Table API and runs server-side tests through a Scripted REST test-runner endpoint. Game logic lives in Script Includes; screens are Service Portal widgets; live sync is `spUtil.recordWatch` + 3-second polling fallback.
+**Architecture:** One ServiceNow scoped app (`x_tekvo_famtriv`) built the same way as the existing **EmailOS** app (`C:\Users\admincjw\ClaudeProjects\GitProjects\EmailOS\fluent`): a **ServiceNow Fluent SDK** workspace (`fluent/`) owns the app shell, tables, roles, and Script Includes, deployed with `now-sdk build` + `now-sdk install` using the already-authenticated **`buildSDK` OAuth profile** (no username/password anywhere). A small Node toolchain (`tools/`) handles what the SDK doesn't: Service Portal records (widgets/pages/portal/theme), data seeding, and the REST test-runner loop — authenticating with the same OAuth token, read from Windows Credential Manager entry `now-sdk.ServiceNow`. Game logic lives in Script Includes; screens are Service Portal widgets; live sync is `spUtil.recordWatch` + 3-second polling fallback.
 
-**Tech Stack:** ServiceNow (scoped app, Service Portal, Scripted REST), server JS = ES5 (Rhino), client JS = AngularJS 1.x (widget API), Node 18+ tooling (native `fetch`), Open Trivia DB for seed questions.
+**Tech Stack:** ServiceNow (scoped app, Service Portal, Scripted REST), `@servicenow/sdk` ^4.8 (Fluent), server JS = ES5 (Rhino), client JS = AngularJS 1.x (widget API), Node 18+ tooling (native `fetch`), Open Trivia DB for seed questions.
 
 **Spec:** `docs/superpowers/specs/2026-07-17-family-trivia-design.md` — read it before starting any task.
 
 ## Global Constraints
 
-- All development happens against the live company instance via REST. Credentials come from `.env` (never committed): `SN_INSTANCE` (e.g. `https://acme.service-now.com`), `SN_USER`, `SN_PASS` (admin account), `SN_SCOPE` (set in Task 2, e.g. `x_tekvo_famtriv`), `SN_APP_ID` (sys_id of the scoped app, set in Task 2).
-- **The user must supply `SN_INSTANCE`, `SN_USER`, `SN_PASS` before Task 1 can be verified.** If `.env` is missing these, stop and ask.
+- Instance: **`https://tekvoyantdev.service-now.com`**. Auth: the `now-sdk` **`buildSDK` OAuth profile** already on this machine (verify with `npx now-sdk auth --list` from any SDK workspace). **Never ask the user for a username or password.** If the OAuth token is expired/revoked, ask the user to re-run `now-sdk auth` interactively — that is the only auth action that needs them.
+- `.env` (gitignored) holds only non-secret settings: `SN_INSTANCE=https://tekvoyantdev.service-now.com`, `SN_SCOPE=x_tekvo_famtriv`, `SN_APP_ID` (sys_id of the app record, captured in Task 2).
+- Artifact ownership is split and must stay split: the **Fluent workspace (`fluent/`)** owns the app record, roles, all 13 tables, all Script Includes (game logic AND test suites), and ACLs if needed. The **REST toolchain (`tools/`)** owns Service Portal records (sp_widget/sp_page/sp_portal/sp_theme), the Scripted REST test endpoint, the scheduled cleanup job, and seed data (avatars, categories, questions). Never manage the same record from both sides.
+- When a Fluent API idiom is unclear, read the corresponding file in the EmailOS workspace (`EmailOS/fluent/src/fluent/*.now.ts`, `EmailOS/fluent/src/server/*.server.js`) — it is the reference implementation for this instance and SDK version. Do not invent Fluent syntax.
+- Every new `fluent/src/server/*.server.js` file must ALSO be registered in the Fluent app definition (per the pattern established in Task 4 Step 1) or the deploy silently skips it — when a class mysteriously "doesn't exist" in the instance, check registration first.
 - Server-side code is **ES5 only** (no `let`/`const`/arrow functions/template literals in Script Includes, business rules, REST operation scripts).
 - Client widget code targets AngularJS 1.x Service Portal widget API (`api.controller`, `c.server.get`, `spUtil`).
 - Every scoped record insert must set `sys_scope` to `SN_APP_ID`.
 - Spec values, verbatim: scoring `(500 + 500 × remaining/total) × (1 + 0.125 × (difficulty − 1))`; 90-day repeat-exclusion window (shrinks if pool exhausted); 8-second reveal auto-advance; defaults 10 questions / 20 seconds; 4-character join code; difficulty 1–5; pools `game`/`practice`; game states `lobby → in_question → reveal → finished`.
 - **Architecture note (approved deviation from spec wording):** the in-game flow (lobby → question → reveal → podium) is ONE widget (`ft-game`) with internal views, not four pages — page reloads would kill recordWatch and the game feel. Home, Practice, Progress, Leaderboard, Profile are separate widgets/pages. Stats rollup is invoked directly from `TriviaEngine.finish()` rather than a business rule — same trigger point, deterministic and testable.
-- TDD loop for server logic: push test Script Include → run `node tools/run-tests.mjs` (expect FAIL) → push implementation → run again (expect PASS) → commit. Commit after every green step.
+- TDD loop for server logic: add/edit the test Script Include source → `(cd fluent && npm run build && npm run deploy)` → `node tools/run-tests.mjs` (expect FAIL) → add implementation → build+deploy → run again (expect PASS) → commit. Commit after every green step.
 - **Approved deviation from spec:** server tests run through a custom in-instance runner (Task 4) instead of ATF — ATF can't be triggered and read cleanly over REST from the CLI, and the runner gives the tight TDD loop this plan depends on. Coverage is the same set the spec names (selection, scoring, rollups, ratings, multiplayer smoke).
 - Widget/UI tasks are verified by loading `/trivia` pages in a browser.
 - Scoped Scripted REST APIs are served at `/api/<SN_SCOPE>/<service_id>` (the namespace is the full scope name). Tooling builds this path from `.env`.
@@ -28,54 +31,116 @@
 
 ```
 FamilyTrivia/
-  .env                      # instance creds — gitignored
+  .env                      # non-secret instance settings — gitignored anyway
   .gitignore
-  README.md                 # how to deploy, test, seed, play (Task 20)
+  README.md                 # how to deploy, test, seed, play (Task 19)
+  fluent/                   # ServiceNow Fluent SDK workspace (mirror of EmailOS/fluent layout)
+    now.config.json         # { scope: x_tekvo_famtriv, name: Family Trivia }
+    package.json            # @servicenow/sdk ^4.8; scripts: build / deploy (now-sdk install)
+    src/fluent/             # *.now.ts Fluent definitions: tables, roles, index
+    src/server/*.server.js  # Script Includes, one file per class (game logic + *Test suites)
   tools/
-    snc.mjs                 # REST helper library (auth, list/insert/update/ensure)
-    sn-cli.mjs              # tiny CLI: whoami / get
-    create-table.mjs        # builds a table from src/tables/*.json
-    deploy-script.mjs       # upserts a Script Include from src/server/*.js
+    snc.mjs                 # REST helper (OAuth Bearer from Credential Manager)
+    get-sn-token.ps1        # reads the now-sdk OAuth token from Windows Credential Manager
+    sn-cli.mjs              # tiny CLI: ping / get
+    create-test-api.mjs     # Scripted REST test-runner endpoint records
     deploy-widget.mjs       # upserts sp_widget from src/widgets/<id>/
     ensure-page.mjs         # creates sp_page→container→row→column→instance chain
+    create-portal.mjs       # sp_portal + sp_theme
+    create-cleanup-job.mjs  # hourly stale-game job
     run-tests.mjs           # calls the in-instance test runner, prints results
-    import-otdb.mjs         # Open Trivia DB seeder (Task 19)
+    import-otdb.mjs         # Open Trivia DB seeder (Task 18)
     seed-avatars.mjs        # avatar gallery seeder (Task 13)
   src/
-    tables/*.json           # one JSON spec per table (Task 3)
-    server/*.js             # Script Includes, one file per class (file name = class name)
-    rest/*.js               # Scripted REST operation scripts
+    rest/*.js               # Scripted REST operation scripts (deployed by create-test-api.mjs)
     widgets/<widget-id>/    # template.html, client.js, server.js, css.scss, widget.json
     portal/theme.css        # shared theme CSS
-  tests/server/*.js         # test Script Includes (deployed same as src/server)
 ```
 
-Script include deploy convention: `node tools/deploy-script.mjs src/server/TriviaScoring.js` upserts a `sys_script_include` named `TriviaScoring` whose script is the file content. Same tool deploys `tests/server/*.js`.
+Script Include convention: each class lives in `fluent/src/server/<ClassName>.server.js` and is registered in the Fluent app definition following the EmailOS idiom; `(cd fluent && npm run build && npm run deploy)` pushes every changed artifact in one shot.
 
 ---
 
-### Task 1: Tooling & instance connectivity
+### Task 1: Fluent workspace + OAuth REST tooling
 
 **Files:**
-- Create: `.gitignore`, `tools/snc.mjs`, `tools/sn-cli.mjs`
+- Create: `.gitignore`, `.env`, `fluent/` (SDK workspace), `tools/get-sn-token.ps1`, `tools/snc.mjs`, `tools/sn-cli.mjs`
 
 **Interfaces:**
-- Produces: `snc.mjs` exports used by every later tool — `sn(method, path, body)`, `list(table, query, fields?)`, `insert(table, data)`, `update(table, sysId, data)`, `ensure(table, query, data)`, `SCOPE` (string), `APP_ID` (string), `BASE` (string). All async except the constants.
+- Produces:
+  - The Fluent SDK workspace `fluent/` (scope `x_tekvo_famtriv`), buildable and deployable with the `buildSDK` OAuth profile.
+  - `snc.mjs` exports used by every later tool — `sn(method, path, body)`, `list(table, query, fields?)`, `insert(table, data)`, `update(table, sysId, data)`, `del(table, sysId)`, `ensure(table, query, data)`, `SCOPE`, `APP_ID`, `BASE`. Auth is an OAuth Bearer token read from Windows Credential Manager (`now-sdk.ServiceNow`) — the same token the SDK uses. No usernames or passwords anywhere.
 
-- [ ] **Step 1: Check for `.env`.** If `C:\Users\admincjw\ClaudeProjects\GitProjects\FamilyTrivia\.env` does not exist or lacks `SN_INSTANCE`/`SN_USER`/`SN_PASS`, STOP and ask the user for the instance URL and admin credentials. Do not invent values.
+- [ ] **Step 1: Verify the OAuth profile is alive.**
 
-- [ ] **Step 2: Write `.gitignore`**
+Run: `cd C:\Users\admincjw\ClaudeProjects\GitProjects\EmailOS\fluent && npx now-sdk auth --list`
+Expected: a `buildSDK` profile, `host = https://tekvoyantdev.service-now.com`, `type = oauth`, `default = Yes`. If it is missing or errors, STOP and ask the user to run `now-sdk auth` interactively — do not attempt to create credentials yourself.
 
+- [ ] **Step 2: Write `.gitignore` and `.env`**
+
+`.gitignore`
 ```
 .env
 node_modules/
+fluent/dist/
+fluent/target/
 ```
 
-- [ ] **Step 3: Write `tools/snc.mjs`**
+`.env`
+```
+SN_INSTANCE=https://tekvoyantdev.service-now.com
+SN_SCOPE=x_tekvo_famtriv
+```
+
+- [ ] **Step 3: Create the Fluent workspace.** Check `npx now-sdk init --help` first; if a non-interactive init exists, use it with scope `x_tekvo_famtriv`, app name `Family Trivia`, auth profile `buildSDK`. Otherwise mirror the EmailOS workspace by hand: copy `EmailOS/fluent/package.json` (change `name` to `@tekvo/familytrivia`, update `description`) and create `fluent/now.config.json`:
+
+```json
+{
+    "scope": "x_tekvo_famtriv",
+    "name": "Family Trivia"
+}
+```
+
+(EmailOS's config also carries a `scopeId` — that is instance-assigned; leave it out and let the first deploy/init fill it in, matching whatever `now-sdk init`/`now-sdk install` produces.)
+
+Then scaffold `fluent/src/fluent/index.now.ts` following `EmailOS/fluent/src/fluent/index.now.ts` (empty app definition to start) and run:
+
+```bash
+cd fluent && npm install
+npm run build
+```
+Expected: build succeeds with zero artifacts. **Consult the EmailOS workspace for every Fluent idiom — do not invent syntax.** The SDK's TypeScript types in `fluent/node_modules/@servicenow/sdk` are the second reference.
+
+- [ ] **Step 4: Write `tools/get-sn-token.ps1`** — reads the SDK's OAuth blob from Windows Credential Manager:
+
+```powershell
+$sig = @"
+[DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+public static extern bool CredRead(string target, int type, int flags, out IntPtr cred);
+[DllImport("advapi32.dll")]
+public static extern void CredFree(IntPtr cred);
+[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+public struct CREDENTIAL { public int Flags; public int Type; public string TargetName; public string Comment; public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten; public int CredentialBlobSize; public IntPtr CredentialBlob; public int Persist; public int AttributeCount; public IntPtr Attributes; public string TargetAlias; public string UserName; }
+"@
+Add-Type -MemberDefinition $sig -Name CredMan -Namespace Win32
+$ptr = [IntPtr]::Zero
+if (-not [Win32.CredMan]::CredRead('now-sdk.ServiceNow', 1, 0, [ref]$ptr)) { throw 'now-sdk credential not found' }
+$cred = [System.Runtime.InteropServices.Marshal]::PtrToStructure($ptr, [type][Win32.CredMan+CREDENTIAL])
+$blob = New-Object byte[] $cred.CredentialBlobSize
+[System.Runtime.InteropServices.Marshal]::Copy($cred.CredentialBlob, $blob, 0, $cred.CredentialBlobSize)
+[Win32.CredMan]::CredFree($ptr)
+[Text.Encoding]::UTF8.GetString($blob)
+```
+
+Run it once (`powershell -NoProfile -ExecutionPolicy Bypass -File tools/get-sn-token.ps1`) and inspect the output shape — expect JSON containing an `access_token` (possibly nested per profile). If the output is garbled, switch the last line to `[Text.Encoding]::Unicode.GetString($blob)`. Record the actual blob shape in a comment at the top of the script.
+
+- [ ] **Step 5: Write `tools/snc.mjs`**
 
 ```js
-// ServiceNow REST helper. Reads .env from repo root. Node 18+.
+// ServiceNow REST helper. OAuth Bearer token from the now-sdk credential store. Node 18+.
 import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const envPath = new URL('../.env', import.meta.url);
 if (existsSync(envPath)) {
@@ -88,10 +153,17 @@ if (existsSync(envPath)) {
 export const BASE = (process.env.SN_INSTANCE || '').replace(/\/+$/, '');
 export const SCOPE = process.env.SN_SCOPE || '';
 export const APP_ID = process.env.SN_APP_ID || '';
-if (!BASE || !process.env.SN_USER || !process.env.SN_PASS) {
-  throw new Error('Missing SN_INSTANCE / SN_USER / SN_PASS in .env');
+if (!BASE) throw new Error('Missing SN_INSTANCE in .env');
+
+function readToken() {
+  const ps1 = fileURLToPath(new URL('./get-sn-token.ps1', import.meta.url));
+  const raw = execFileSync('powershell.exe',
+    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1], { encoding: 'utf8' });
+  const m = raw.match(/"access_token"\s*:\s*"([^"]+)"/);
+  if (!m) throw new Error('No access_token in now-sdk credential blob. Run a now-sdk command to refresh, or re-auth with `now-sdk auth`.');
+  return m[1];
 }
-const AUTH = 'Basic ' + Buffer.from(`${process.env.SN_USER}:${process.env.SN_PASS}`).toString('base64');
+const AUTH = 'Bearer ' + readToken();
 
 export async function sn(method, path, body) {
   const res = await fetch(BASE + path, {
@@ -124,144 +196,89 @@ export async function ensure(table, query, data) {
 }
 ```
 
-- [ ] **Step 4: Write `tools/sn-cli.mjs`**
+- [ ] **Step 6: Write `tools/sn-cli.mjs`**
 
 ```js
 import { sn, list } from './snc.mjs';
 const [, , cmd, ...args] = process.argv;
-if (cmd === 'whoami') {
-  const r = await list('sys_user', 'user_name=' + process.env.SN_USER, 'user_name,name,sys_id');
-  console.log(JSON.stringify(r, null, 2));
+if (cmd === 'ping') {
+  const r = await list('sys_user', 'active=true', 'sys_id');
+  console.log('auth OK, sample rows: ' + r.length);
 } else if (cmd === 'get') {
   console.log(JSON.stringify(await list(args[0], args[1] || '', args[2] || ''), null, 2));
 } else {
-  console.log('usage: node tools/sn-cli.mjs whoami | get <table> [query] [fields]');
+  console.log('usage: node tools/sn-cli.mjs ping | get <table> [query] [fields]');
 }
 ```
 
-- [ ] **Step 5: Verify connectivity**
+- [ ] **Step 7: Verify connectivity**
 
-Run: `node tools/sn-cli.mjs whoami`
-Expected: JSON array with one user record matching the admin account. A 401 means bad credentials; a fetch error means bad instance URL. Fix `.env` with the user before continuing.
+Run: `node tools/sn-cli.mjs ping`
+Expected: `auth OK, sample rows: <n>` with n ≥ 1. On 401: the access token has expired — run any real SDK command (e.g. `cd fluent && npm run build && npx now-sdk install`) which refreshes the stored token, then retry; if it still fails, ask the user to re-run `now-sdk auth`. Note in the README later which refresh path worked.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add .gitignore tools/snc.mjs tools/sn-cli.mjs
-git commit -m "feat: ServiceNow REST tooling and connectivity check"
+git add .gitignore fluent tools/snc.mjs tools/sn-cli.mjs tools/get-sn-token.ps1
+git commit -m "feat: Fluent SDK workspace and OAuth REST tooling"
 ```
 
 ---
 
-### Task 2: Scoped app and roles
+### Task 2: App + roles via Fluent, capture APP_ID
 
 **Files:**
-- Create: `tools/create-app.mjs`
-- Modify: `.env` (append `SN_SCOPE=`, `SN_APP_ID=`)
+- Create: `fluent/src/fluent/roles.now.ts`
+- Modify: `.env` (append `SN_APP_ID=`)
 
 **Interfaces:**
-- Consumes: `snc.mjs` helpers.
-- Produces: the scoped app record; `SN_SCOPE` + `SN_APP_ID` in `.env` (read by `snc.mjs` as `SCOPE`/`APP_ID`); roles `<SCOPE>.player` and `<SCOPE>.admin`.
+- Consumes: the Fluent workspace from Task 1.
+- Produces: the `Family Trivia` app record on the instance; roles `x_tekvo_famtriv.player` and `x_tekvo_famtriv.admin` (Fluent-owned); `SN_APP_ID` in `.env`.
 
-- [ ] **Step 1: Discover the vendor prefix**
+- [ ] **Step 1: Define the roles in Fluent.** Create `fluent/src/fluent/roles.now.ts` declaring the two roles (`player`, `admin` — the SDK prefixes the scope). Use the `Role` API from `@servicenow/sdk/core`; check EmailOS for a usage example (`grep -r "Role" EmailOS/fluent/src/fluent/`) or the SDK types. Register the file in `index.now.ts` the same way EmailOS registers its fluent modules.
 
-Run: `node tools/sn-cli.mjs get sys_properties name=glide.appcreator.company.code value`
-Expected: one record whose `value` is the vendor code (e.g. `tekvo`). If empty, ask the user what vendor prefix their instance uses (visible when creating any app in Studio).
+- [ ] **Step 2: First deploy — creates the app**
 
-- [ ] **Step 2: Write `tools/create-app.mjs`** (uses the prefix from Step 1 via env var `VENDOR`)
-
-```js
-import { ensure, list } from './snc.mjs';
-const vendor = process.env.VENDOR;
-if (!vendor) throw new Error('Run as: VENDOR=<code> node tools/create-app.mjs');
-const scope = `x_${vendor}_famtriv`;
-const app = await ensure('sys_app', 'scope=' + scope, {
-  name: 'Family Trivia', scope, version: '1.0.0', vendor_prefix: vendor,
-  short_description: 'Family trivia game with live multiplayer, practice mode, and leaderboards',
-});
-for (const suffix of ['player', 'admin']) {
-  await ensure('sys_user_role', `name=${scope}.${suffix}`, {
-    name: `${scope}.${suffix}`, sys_scope: app.sys_id,
-    description: suffix === 'player' ? 'Family Trivia player' : 'Family Trivia administrator',
-  });
-}
-console.log(`SN_SCOPE=${scope}`);
-console.log(`SN_APP_ID=${app.sys_id}`);
+```bash
+cd fluent && npm run build && npm run deploy
 ```
+Expected: `now-sdk install` completes and reports the app installed on `tekvoyantdev.service-now.com`. If the deploy asks about the auth profile, select/confirm `buildSDK`.
 
-- [ ] **Step 3: Run it and record the output in `.env`**
+- [ ] **Step 3: Capture the app sys_id**
 
-Run: `VENDOR=<code from Step 1> node tools/create-app.mjs` (PowerShell: `$env:VENDOR='<code>'; node tools/create-app.mjs`)
-Expected: two lines, `SN_SCOPE=...` and `SN_APP_ID=<32-char sys_id>`. Append both lines to `.env`.
+Run: `node tools/sn-cli.mjs get sys_app scope=x_tekvo_famtriv name,scope,sys_id`
+Expected: one record. Append `SN_APP_ID=<its sys_id>` to `.env`.
 
-- [ ] **Step 4: Verify**
+- [ ] **Step 4: Verify roles**
 
-Run: `node tools/sn-cli.mjs get sys_app scope=x_<vendor>_famtriv name,scope,sys_id` and `node tools/sn-cli.mjs get sys_user_role nameSTARTSWITHx_<vendor>_famtriv name`
-Expected: the app record, and both roles.
+Run: `node tools/sn-cli.mjs get sys_user_role nameSTARTSWITHx_tekvo_famtriv name`
+Expected: both roles.
 
-- [ ] **Step 5: Grant roles to the family (user action).** Ask the user to assign `<SCOPE>.player` to each family member's account and `<SCOPE>.admin` to their own, or provide the usernames so you can insert `sys_user_has_role` records via `ensure('sys_user_has_role', 'user=<uid>^role=<roleId>', {user, role})`.
+- [ ] **Step 5: Grant roles to the family (user action).** Ask the user to assign `x_tekvo_famtriv.player` to each family member's account and `x_tekvo_famtriv.admin` to their own, or provide the usernames so you can insert `sys_user_has_role` records via `ensure('sys_user_has_role', 'user=<uid>^role=<roleId>', {user, role})`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tools/create-app.mjs
-git commit -m "feat: create Family Trivia scoped app and roles"
+git add fluent .env.example 2>/dev/null; git add fluent
+git commit -m "feat: Family Trivia app and roles via Fluent SDK"
 ```
 
 ---
 
-### Task 3: Data model — all tables
+### Task 3: Data model — all tables (Fluent)
 
 **Files:**
-- Create: `tools/create-table.mjs`, and one spec per table under `src/tables/`: `category.json`, `question.json`, `question_option.json`, `game.json`, `game_player.json`, `game_question.json`, `response.json`, `profile.json`, `avatar.json`, `skill_rating.json`, `player_stats.json`, `player_category_stats.json`, `practice_session.json`
+- Create: `fluent/src/fluent/tables.now.ts` (all 13 table definitions), `tools/probe-tables.mjs`
 
 **Interfaces:**
-- Consumes: `snc.mjs` helpers, `SCOPE`, `APP_ID`.
-- Produces: instance tables named `<SCOPE>_<spec name>` (e.g. `x_tekvo_famtriv_question`). In server-side Script Includes, tables are referenced by full literal name built once in the class constructor from `gs.getCurrentScopeName() + '_question'` etc. In table specs, references to our own tables are written `@scope@_<name>` and expanded by the tool.
+- Consumes: the Fluent workspace; `snc.mjs` for verification.
+- Produces: instance tables named `x_tekvo_famtriv_<name>`. In server-side Script Includes, tables are referenced by literal name built once in the class constructor from `gs.getCurrentScopeName() + '_question'` etc.
 
-- [ ] **Step 1: Write `tools/create-table.mjs`**
+- [ ] **Step 1: Learn the Fluent table idiom.** Read `EmailOS/fluent/src/fluent/foundation.now.ts` (and the SDK types under `fluent/node_modules/@servicenow/sdk`) to get the exact syntax for: table + label, string/integer/boolean/decimal/date-time columns, choice columns with value/label pairs, reference columns (to scoped tables AND to `sys_user`), default values, and max lengths. Do not invent syntax — every construct you need appears in EmailOS or the SDK types.
 
-```js
-import { readFileSync } from 'node:fs';
-import { SCOPE, APP_ID, ensure, insert, del } from './snc.mjs';
-if (!SCOPE || !APP_ID) throw new Error('SN_SCOPE / SN_APP_ID missing from .env (run Task 2)');
+- [ ] **Step 2: Translate the following field specs into `fluent/src/fluent/tables.now.ts`.** The JSON blocks below are the authoritative field lists (element name, label, type, choices, defaults, max lengths) — one Fluent table definition each, registered in `index.now.ts`. In the specs, `@scope@_<name>` means a reference to our own table `x_tekvo_famtriv_<name>`.
 
-const spec = JSON.parse(readFileSync(process.argv[2], 'utf8').replace(/@scope@/g, SCOPE));
-const table = `${SCOPE}_${spec.name}`;
-
-await ensure('sys_db_object', 'name=' + table, {
-  name: table, label: spec.label, sys_scope: APP_ID, access: 'public',
-});
-
-const TYPE_LEN = { string: 255, integer: 40, boolean: 40, reference: 32, glide_date_time: 40, decimal: 15 };
-for (const f of spec.fields) {
-  const internal = f.type === 'choice' ? 'string' : f.type;
-  const data = {
-    name: table, element: f.element, column_label: f.label,
-    internal_type: internal, max_length: f.max_length || TYPE_LEN[internal] || 255,
-    reference: f.reference || '', sys_scope: APP_ID,
-  };
-  if (f.type === 'choice') data.choice = '1';
-  if (f.default !== undefined) data.default_value = String(f.default);
-  await ensure('sys_dictionary', `name=${table}^element=${f.element}`, data);
-  for (const [value, label] of f.choices || []) {
-    await ensure('sys_choice', `name=${table}^element=${f.element}^value=${value}`, {
-      name: table, element: f.element, value, label, language: 'en', inactive: 'false', sys_scope: APP_ID,
-    });
-  }
-}
-
-// smoke: insert + delete a row to prove the table is queryable
-const probe = await insert(table, {});
-await del(table, probe.sys_id);
-console.log(`ok: ${table} (${spec.fields.length} fields)`);
-```
-
-**Fallback note:** if `sys_db_object`/`sys_dictionary` inserts are rejected by the instance (some instances restrict dictionary writes via API), create the tables manually in Studio using the same specs, then re-run the script — `ensure` will no-op existing pieces and still add choices/fields. Flag this to the user if it happens.
-
-- [ ] **Step 2: Write the 13 table specs**
-
-`src/tables/category.json`
+**Table `category`** (field spec):
 ```json
 { "name": "category", "label": "Trivia Category", "fields": [
   { "element": "name", "label": "Name", "type": "string", "max_length": 80 },
@@ -272,7 +289,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/question.json`
+**Table `question`** (field spec):
 ```json
 { "name": "question", "label": "Trivia Question", "fields": [
   { "element": "text", "label": "Text", "type": "string", "max_length": 1024 },
@@ -285,7 +302,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/question_option.json`
+**Table `question_option`** (field spec):
 ```json
 { "name": "question_option", "label": "Question Option", "fields": [
   { "element": "question", "label": "Question", "type": "reference", "reference": "@scope@_question" },
@@ -295,7 +312,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/game.json`
+**Table `game`** (field spec):
 ```json
 { "name": "game", "label": "Trivia Game", "fields": [
   { "element": "code", "label": "Join Code", "type": "string", "max_length": 8 },
@@ -312,7 +329,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/game_player.json`
+**Table `game_player`** (field spec):
 ```json
 { "name": "game_player", "label": "Game Player", "fields": [
   { "element": "game", "label": "Game", "type": "reference", "reference": "@scope@_game" },
@@ -324,7 +341,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/game_question.json`
+**Table `game_question`** (field spec):
 ```json
 { "name": "game_question", "label": "Game Question", "fields": [
   { "element": "game", "label": "Game", "type": "reference", "reference": "@scope@_game" },
@@ -334,7 +351,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/response.json`
+**Table `response`** (field spec):
 ```json
 { "name": "response", "label": "Response", "fields": [
   { "element": "game", "label": "Game", "type": "reference", "reference": "@scope@_game" },
@@ -349,7 +366,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/profile.json`
+**Table `profile`** (field spec):
 ```json
 { "name": "profile", "label": "Player Profile", "fields": [
   { "element": "user", "label": "User", "type": "reference", "reference": "sys_user" },
@@ -360,7 +377,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/avatar.json`
+**Table `avatar`** (field spec):
 ```json
 { "name": "avatar", "label": "Avatar", "fields": [
   { "element": "name", "label": "Name", "type": "string", "max_length": 40 },
@@ -370,7 +387,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/skill_rating.json`
+**Table `skill_rating`** (field spec):
 ```json
 { "name": "skill_rating", "label": "Skill Rating", "fields": [
   { "element": "user", "label": "User", "type": "reference", "reference": "sys_user" },
@@ -380,7 +397,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/player_stats.json`
+**Table `player_stats`** (field spec):
 ```json
 { "name": "player_stats", "label": "Player Stats", "fields": [
   { "element": "user", "label": "User", "type": "reference", "reference": "sys_user" },
@@ -392,7 +409,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/player_category_stats.json`
+**Table `player_category_stats`** (field spec):
 ```json
 { "name": "player_category_stats", "label": "Player Category Stats", "fields": [
   { "element": "user", "label": "User", "type": "reference", "reference": "sys_user" },
@@ -401,7 +418,7 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-`src/tables/practice_session.json`
+**Table `practice_session`** (field spec):
 ```json
 { "name": "practice_session", "label": "Practice Session", "fields": [
   { "element": "user", "label": "User", "type": "reference", "reference": "sys_user" },
@@ -412,28 +429,41 @@ console.log(`ok: ${table} (${spec.fields.length} fields)`);
 ] }
 ```
 
-Creation order matters (references): category, question, question_option, avatar, profile, game, game_player, game_question, response, skill_rating, player_stats, player_category_stats, practice_session.
+(Since all 13 tables deploy in one Fluent build, declaration order within `tables.now.ts` only needs to satisfy the compiler — follow whatever ordering EmailOS uses for intra-app references.)
 
-- [ ] **Step 3: Create all tables**
+- [ ] **Step 3: Deploy and probe all tables**
 
-Run (Git Bash):
 ```bash
-for t in category question question_option avatar profile game game_player game_question response skill_rating player_stats player_category_stats practice_session; do
-  node tools/create-table.mjs "src/tables/$t.json" || break
-done
+cd fluent && npm run build && npm run deploy
 ```
-Expected: thirteen `ok: <table> (N fields)` lines. The insert+delete probe inside the tool proves each table accepts records.
+
+Then write `tools/probe-tables.mjs` — inserts and deletes one empty row per table to prove each exists and accepts records:
+
+```js
+import { SCOPE, insert, del } from './snc.mjs';
+const TABLES = ['category', 'question', 'question_option', 'avatar', 'profile', 'game',
+  'game_player', 'game_question', 'response', 'skill_rating', 'player_stats',
+  'player_category_stats', 'practice_session'];
+for (const t of TABLES) {
+  const rec = await insert(`${SCOPE}_${t}`, {});
+  await del(`${SCOPE}_${t}`, rec.sys_id);
+  console.log('ok: ' + SCOPE + '_' + t);
+}
+```
+
+Run: `node tools/probe-tables.mjs`
+Expected: thirteen `ok:` lines.
 
 - [ ] **Step 4: Verify a reference field works end-to-end**
 
-Run: `node tools/sn-cli.mjs get sys_dictionary "name=<SCOPE>_question^element=category" reference,internal_type`
-Expected: `reference` = `<SCOPE>_category`, `internal_type` = `reference`.
+Run: `node tools/sn-cli.mjs get sys_dictionary "name=x_tekvo_famtriv_question^element=category" reference,internal_type`
+Expected: `reference` = `x_tekvo_famtriv_category`, `internal_type` = `reference`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tools/create-table.mjs src/tables
-git commit -m "feat: create all 13 trivia tables from JSON specs"
+git add fluent tools/probe-tables.mjs
+git commit -m "feat: all 13 trivia tables defined in Fluent"
 ```
 
 ---
@@ -441,34 +471,19 @@ git commit -m "feat: create all 13 trivia tables from JSON specs"
 ### Task 4: In-instance test harness
 
 **Files:**
-- Create: `tools/deploy-script.mjs`, `tools/run-tests.mjs`, `src/server/TriviaTestBase.js`, `src/server/TriviaTestRunner.js`, `src/rest/test_run.js`, `tests/server/TriviaHarnessTest.js`
+- Create: `tools/create-test-api.mjs`, `tools/run-tests.mjs`, `fluent/src/server/TriviaTestBase.server.js`, `fluent/src/server/TriviaTestRunner.server.js`, `src/rest/test_run.js`, `fluent/src/server/TriviaHarnessTest.server.js`
 
 **Interfaces:**
-- Consumes: `snc.mjs`.
+- Consumes: `snc.mjs`; the Fluent workspace.
 - Produces:
-  - `deploy-script.mjs <file>` — upserts a `sys_script_include` whose name = file basename, script = file content, accessible from all scopes within app.
+  - The Script-Include registration pattern every server task follows: each ES5 class lives in `fluent/src/server/<ClassName>.server.js` and is declared as a Script Include in the Fluent app definition — find the exact idiom in EmailOS (`grep -ri "script" EmailOS/fluent/src/fluent/*.now.ts` shows how its `src/server/*.server.js` files are registered) and mirror it. Deploy = `cd fluent && npm run build && npm run deploy`.
   - `run-tests.mjs` — GETs `/api/<SCOPE>/ftest/run`, prints results, exits 0 on all-pass / 1 on any failure.
   - `TriviaTestBase` — ES5 base class: `this.failures` array, `assert(cond, msg)`, `assertEqual(actual, expected, msg)`, `run()` (invokes every own method starting with `test`, catches exceptions as failures, returns `{name, passed, total, failures}`).
   - `TriviaTestRunner.runAll()` — returns `{passed: bool, suites: [...]}`. **Every later server task registers its suite in `TriviaTestRunner.suites()`.**
 
-- [ ] **Step 1: Write `tools/deploy-script.mjs`**
+- [ ] **Step 1: Establish the Script Include registration pattern.** Study how EmailOS registers its `src/server/*.server.js` files as Script Includes in the Fluent definition, and set up the same structure for this app (registration lives in `index.now.ts` or a dedicated `.now.ts` module — copy the EmailOS layout). One important check: ServiceNow Script Includes must be **ES5 accessible by classic Rhino consumers** (Service Portal widget server scripts and our Scripted REST endpoint call `new TriviaEngine()` etc. directly), so register them as classic Script Includes, not SDK-private modules. Verify by deploying `TriviaTestBase` (Step 2) and confirming `node tools/sn-cli.mjs get sys_script_include "name=TriviaTestBase" name,access,sys_scope.scope` shows it in scope `x_tekvo_famtriv`.
 
-```js
-import { readFileSync } from 'node:fs';
-import { basename } from 'node:path';
-import { APP_ID, ensure } from './snc.mjs';
-const file = process.argv[2];
-const name = basename(file, '.js');
-const script = readFileSync(file, 'utf8');
-await ensure('sys_script_include', 'name=' + name + '^sys_scope=' + APP_ID, {
-  name, script, sys_scope: APP_ID, api_name: undefined, access: 'package_private', active: 'true',
-});
-console.log('deployed script include: ' + name);
-```
-
-(`api_name` is instance-generated; passing `undefined` omits it from the JSON body.)
-
-- [ ] **Step 2: Write `src/server/TriviaTestBase.js`** (ES5)
+- [ ] **Step 2: Write `fluent/src/server/TriviaTestBase.server.js`** (ES5)
 
 ```js
 var TriviaTestBase = Class.create();
@@ -494,7 +509,7 @@ TriviaTestBase.prototype = {
 };
 ```
 
-- [ ] **Step 3: Write `src/server/TriviaTestRunner.js`** (ES5). The `suites()` list grows one line per later task.
+- [ ] **Step 3: Write `fluent/src/server/TriviaTestRunner.server.js`** (ES5). The `suites()` list grows one line per later task.
 
 ```js
 var TriviaTestRunner = Class.create();
@@ -509,7 +524,7 @@ TriviaTestRunner.prototype = {
       // Task 8 adds: , new TriviaEngineTest()
       // Task 9 adds: , new TriviaStatsTest()
       // Task 10 adds: , new TriviaPracticeTest()
-      // Task 20 adds: , new TriviaE2ETest()
+      // Task 19 adds: , new TriviaE2ETest()
     ];
   },
   runAll: function() {
@@ -526,7 +541,7 @@ TriviaTestRunner.prototype = {
 };
 ```
 
-- [ ] **Step 4: Write `tests/server/TriviaHarnessTest.js`** — proves the harness itself works
+- [ ] **Step 4: Write `fluent/src/server/TriviaHarnessTest.server.js`** — proves the harness itself works
 
 ```js
 var TriviaHarnessTest = Class.create();
@@ -579,9 +594,7 @@ process.exit(r.passed ? 0 : 1);
 - [ ] **Step 8: Deploy and run**
 
 ```bash
-node tools/deploy-script.mjs src/server/TriviaTestBase.js
-node tools/deploy-script.mjs src/server/TriviaTestRunner.js
-node tools/deploy-script.mjs tests/server/TriviaHarnessTest.js
+(cd fluent && npm run build && npm run deploy)
 node tools/create-test-api.mjs
 node tools/run-tests.mjs
 ```
@@ -590,7 +603,7 @@ Expected final output: `PASS  TriviaHarnessTest (2 tests)` and exit code 0.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add tools src tests
+git add tools fluent
 git commit -m "feat: in-instance TDD harness (test base, runner, REST endpoint, CLI)"
 ```
 
@@ -599,13 +612,13 @@ git commit -m "feat: in-instance TDD harness (test base, runner, REST endpoint, 
 ### Task 5: TriviaScoring (TDD)
 
 **Files:**
-- Create: `src/server/TriviaScoring.js`, `tests/server/TriviaScoringTest.js`
-- Modify: `src/server/TriviaTestRunner.js` (register suite)
+- Create: `fluent/src/server/TriviaScoring.server.js`, `fluent/src/server/TriviaScoringTest.server.js`
+- Modify: `fluent/src/server/TriviaTestRunner.server.js` (register suite)
 
 **Interfaces:**
 - Produces: `new TriviaScoring().score(correct /*bool*/, answerMs /*int*/, totalSec /*int*/, difficulty /*1..5*/)` → integer points. Used by TriviaEngine (Task 8) and TriviaPractice (Task 10).
 
-- [ ] **Step 1: Write the failing test** — `tests/server/TriviaScoringTest.js`
+- [ ] **Step 1: Write the failing test** — `fluent/src/server/TriviaScoringTest.server.js`
 
 ```js
 var TriviaScoringTest = Class.create();
@@ -636,18 +649,17 @@ TriviaScoringTest.prototype = Object.extendsObject(TriviaTestBase, {
 });
 ```
 
-- [ ] **Step 2: Register the suite.** In `src/server/TriviaTestRunner.js`, add `, new TriviaScoringTest()` after `new TriviaHarnessTest()`.
+- [ ] **Step 2: Register the suite.** In `fluent/src/server/TriviaTestRunner.server.js`, add `, new TriviaScoringTest()` after `new TriviaHarnessTest()`.
 
 - [ ] **Step 3: Deploy test + runner, verify FAIL**
 
 ```bash
-node tools/deploy-script.mjs tests/server/TriviaScoringTest.js
-node tools/deploy-script.mjs src/server/TriviaTestRunner.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: `FAIL TriviaScoringTest` (TriviaScoring is not defined — tests throw), exit 1.
 
-- [ ] **Step 4: Write `src/server/TriviaScoring.js`**
+- [ ] **Step 4: Write `fluent/src/server/TriviaScoring.server.js`**
 
 ```js
 var TriviaScoring = Class.create();
@@ -669,7 +681,7 @@ TriviaScoring.prototype = {
 - [ ] **Step 5: Deploy, verify PASS**
 
 ```bash
-node tools/deploy-script.mjs src/server/TriviaScoring.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: all suites PASS, exit 0.
@@ -677,7 +689,7 @@ Expected: all suites PASS, exit 0.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/server/TriviaScoring.js src/server/TriviaTestRunner.js tests/server/TriviaScoringTest.js
+git add fluent/src/server/TriviaScoring.server.js fluent/src/server/TriviaTestRunner.server.js fluent/src/server/TriviaScoringTest.server.js
 git commit -m "feat: TriviaScoring with speed+difficulty formula (TDD)"
 ```
 
@@ -686,8 +698,8 @@ git commit -m "feat: TriviaScoring with speed+difficulty formula (TDD)"
 ### Task 6: TriviaSkill (TDD)
 
 **Files:**
-- Create: `src/server/TriviaSkill.js`, `tests/server/TriviaSkillTest.js`
-- Modify: `src/server/TriviaTestRunner.js` (register `new TriviaSkillTest()`)
+- Create: `fluent/src/server/TriviaSkill.server.js`, `fluent/src/server/TriviaSkillTest.server.js`
+- Modify: `fluent/src/server/TriviaTestRunner.server.js` (register `new TriviaSkillTest()`)
 
 **Interfaces:**
 - Consumes: tables `<SCOPE>_skill_rating`, `<SCOPE>_profile`.
@@ -697,7 +709,7 @@ git commit -m "feat: TriviaScoring with speed+difficulty formula (TDD)"
 
 Test data convention (used by all data-touching suites): create records inside the test, delete them in a `cleanup()` method called at the end of each test method (`try/finally` is fine in Rhino ES5). Test users are `sys_user` rows with `user_name` starting `famtriv.test` — created via `_ensureTestUser(name)` helper shown below; reused, never deleted.
 
-- [ ] **Step 1: Write the failing test** — `tests/server/TriviaSkillTest.js`
+- [ ] **Step 1: Write the failing test** — `fluent/src/server/TriviaSkillTest.server.js`
 
 ```js
 var TriviaSkillTest = Class.create();
@@ -769,13 +781,12 @@ TriviaSkillTest.prototype = Object.extendsObject(TriviaTestBase, {
 - [ ] **Step 2: Register suite in TriviaTestRunner, deploy test + runner, verify FAIL**
 
 ```bash
-node tools/deploy-script.mjs tests/server/TriviaSkillTest.js
-node tools/deploy-script.mjs src/server/TriviaTestRunner.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: `FAIL TriviaSkillTest` (TriviaSkill not defined), exit 1.
 
-- [ ] **Step 3: Write `src/server/TriviaSkill.js`**
+- [ ] **Step 3: Write `fluent/src/server/TriviaSkill.server.js`**
 
 ```js
 var TriviaSkill = Class.create();
@@ -823,7 +834,7 @@ TriviaSkill.prototype = {
 - [ ] **Step 4: Deploy, verify PASS**
 
 ```bash
-node tools/deploy-script.mjs src/server/TriviaSkill.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: all PASS, exit 0.
@@ -831,7 +842,7 @@ Expected: all PASS, exit 0.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/server/TriviaSkill.js src/server/TriviaTestRunner.js tests/server/TriviaSkillTest.js
+git add fluent/src/server/TriviaSkill.server.js fluent/src/server/TriviaTestRunner.server.js fluent/src/server/TriviaSkillTest.server.js
 git commit -m "feat: TriviaSkill rating with EWMA accuracy and manual override (TDD)"
 ```
 
@@ -840,8 +851,8 @@ git commit -m "feat: TriviaSkill rating with EWMA accuracy and manual override (
 ### Task 7: TriviaSelector (TDD)
 
 **Files:**
-- Create: `src/server/TriviaSelector.js`, `tests/server/TriviaSelectorTest.js`
-- Modify: `src/server/TriviaTestRunner.js` (register `new TriviaSelectorTest()`)
+- Create: `fluent/src/server/TriviaSelector.server.js`, `fluent/src/server/TriviaSelectorTest.server.js`
+- Modify: `fluent/src/server/TriviaTestRunner.server.js` (register `new TriviaSelectorTest()`)
 
 **Interfaces:**
 - Consumes: `TriviaSkill.targetDifficulty`, tables `question`, `response`.
@@ -850,7 +861,7 @@ git commit -m "feat: TriviaSkill rating with EWMA accuracy and manual override (
   - `new TriviaSelector().pickUniform(categoryIds, n, userIds)` → array of n question sys_ids, `pool=game`, active, excluding questions ANY listed user answered within the exclusion window (90 days, halving to 45/22/... until enough candidates exist; 0 = no exclusion).
   - `new TriviaSelector().pickForUser(categoryId, userId, excludeIds /*array*/, pool /*'game'|'practice'*/)` → one question sys_id at the user's target difficulty for that category (falls back ±1, then any difficulty), same 90-day per-user exclusion, or `''` if the pool is empty.
 
-- [ ] **Step 1: Write the failing test** — `tests/server/TriviaSelectorTest.js`
+- [ ] **Step 1: Write the failing test** — `fluent/src/server/TriviaSelectorTest.server.js`
 
 ```js
 var TriviaSelectorTest = Class.create();
@@ -949,13 +960,12 @@ TriviaSelectorTest.prototype = Object.extendsObject(TriviaTestBase, {
 - [ ] **Step 2: Register suite, deploy test + runner, verify FAIL**
 
 ```bash
-node tools/deploy-script.mjs tests/server/TriviaSelectorTest.js
-node tools/deploy-script.mjs src/server/TriviaTestRunner.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: `FAIL TriviaSelectorTest`, exit 1.
 
-- [ ] **Step 3: Write `src/server/TriviaSelector.js`**
+- [ ] **Step 3: Write `fluent/src/server/TriviaSelector.server.js`**
 
 ```js
 var TriviaSelector = Class.create();
@@ -1037,7 +1047,7 @@ TriviaSelector.prototype = {
 - [ ] **Step 4: Deploy, verify PASS**
 
 ```bash
-node tools/deploy-script.mjs src/server/TriviaSelector.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: all PASS, exit 0. (`testPickForUserMatchesDifficulty` is deterministic because only one difficulty-3 question exists.)
@@ -1045,7 +1055,7 @@ Expected: all PASS, exit 0. (`testPickForUserMatchesDifficulty` is deterministic
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/server/TriviaSelector.js src/server/TriviaTestRunner.js tests/server/TriviaSelectorTest.js
+git add fluent/src/server/TriviaSelector.server.js fluent/src/server/TriviaTestRunner.server.js fluent/src/server/TriviaSelectorTest.server.js
 git commit -m "feat: TriviaSelector with per-user difficulty targeting and shrinking exclusion window (TDD)"
 ```
 
@@ -1054,8 +1064,8 @@ git commit -m "feat: TriviaSelector with per-user difficulty targeting and shrin
 ### Task 8: TriviaEngine (TDD)
 
 **Files:**
-- Create: `src/server/TriviaEngine.js`, `tests/server/TriviaEngineTest.js`
-- Modify: `src/server/TriviaTestRunner.js` (register `new TriviaEngineTest()`)
+- Create: `fluent/src/server/TriviaEngine.server.js`, `fluent/src/server/TriviaEngineTest.server.js`
+- Modify: `fluent/src/server/TriviaTestRunner.server.js` (register `new TriviaEngineTest()`)
 
 **Interfaces:**
 - Consumes: `TriviaSelector`, `TriviaScoring`, `TriviaSkill`; `TriviaStats.rollupGame` (Task 9 — until then, engine guards with `typeof TriviaStats !== 'undefined'`).
@@ -1070,7 +1080,7 @@ git commit -m "feat: TriviaSelector with per-user difficulty targeting and shrin
   - `getState(gameId, userId)` — one JSON snapshot the game widget renders from (shape documented in the code below; **never leaks correct flags while state is `in_question`**).
   - `champion()` — `{userId}` of most recent finished game's winner, or `{userId: ''}`.
 
-- [ ] **Step 1: Write the failing test** — `tests/server/TriviaEngineTest.js`. Full game lifecycle with two users.
+- [ ] **Step 1: Write the failing test** — `fluent/src/server/TriviaEngineTest.server.js`. Full game lifecycle with two users.
 
 ```js
 var TriviaEngineTest = Class.create();
@@ -1229,13 +1239,12 @@ TriviaEngineTest.prototype = Object.extendsObject(TriviaTestBase, {
 - [ ] **Step 2: Register suite, deploy test + runner, verify FAIL**
 
 ```bash
-node tools/deploy-script.mjs tests/server/TriviaEngineTest.js
-node tools/deploy-script.mjs src/server/TriviaTestRunner.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: `FAIL TriviaEngineTest`, exit 1.
 
-- [ ] **Step 3: Write `src/server/TriviaEngine.js`**
+- [ ] **Step 3: Write `fluent/src/server/TriviaEngine.server.js`**
 
 ```js
 var TriviaEngine = Class.create();
@@ -1605,7 +1614,7 @@ TriviaEngine.prototype = {
 - [ ] **Step 4: Deploy, verify PASS**
 
 ```bash
-node tools/deploy-script.mjs src/server/TriviaEngine.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: all suites PASS, exit 0.
@@ -1613,7 +1622,7 @@ Expected: all suites PASS, exit 0.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/server/TriviaEngine.js src/server/TriviaTestRunner.js tests/server/TriviaEngineTest.js
+git add fluent/src/server/TriviaEngine.server.js fluent/src/server/TriviaTestRunner.server.js fluent/src/server/TriviaEngineTest.server.js
 git commit -m "feat: TriviaEngine full game lifecycle with tick-driven timing (TDD)"
 ```
 
@@ -1622,8 +1631,8 @@ git commit -m "feat: TriviaEngine full game lifecycle with tick-driven timing (T
 ### Task 9: TriviaStats — leaderboard rollup & champion data (TDD)
 
 **Files:**
-- Create: `src/server/TriviaStats.js`, `tests/server/TriviaStatsTest.js`
-- Modify: `src/server/TriviaTestRunner.js` (register `new TriviaStatsTest()`)
+- Create: `fluent/src/server/TriviaStats.server.js`, `fluent/src/server/TriviaStatsTest.server.js`
+- Modify: `fluent/src/server/TriviaTestRunner.server.js` (register `new TriviaStatsTest()`)
 
 **Interfaces:**
 - Consumes: tables `game`, `game_player`, `response`, `question`, `player_stats`, `player_category_stats`; called by `TriviaEngine.finish()`.
@@ -1631,9 +1640,9 @@ git commit -m "feat: TriviaEngine full game lifecycle with tick-driven timing (T
   - `new TriviaStats().rollupGame(gameId)` — idempotence guard: skips if this game was already rolled up (tracked by a `rolled_up` boolean added to the game table in Step 1). For each game player: `total_points += score`, `total_correct += correct_count`; per-category correct counts from that game's responses joined to question.category; winner gets `total_wins++`, `current_win_streak++`, `longest_win_streak = max`; every other player's `current_win_streak = 0`.
   - `new TriviaStats().leaderboard()` — `{rows: [{userId, wins, points, correct, longestStreak}], byCategory: {catId: [{userId, correct}]}}` sorted appropriately.
 
-- [ ] **Step 1: Add the `rolled_up` field to the game table.** Append to `src/tables/game.json` fields: `{ "element": "rolled_up", "label": "Stats Rolled Up", "type": "boolean", "default": false }`, then run `node tools/create-table.mjs src/tables/game.json` (ensure is additive).
+- [ ] **Step 1: Add the `rolled_up` field to the game table.** In `fluent/src/fluent/tables.now.ts`, add a boolean column `rolled_up` (label "Stats Rolled Up", default false) to the `game` table definition, then `cd fluent && npm run build && npm run deploy`.
 
-- [ ] **Step 2: Write the failing test** — `tests/server/TriviaStatsTest.js`
+- [ ] **Step 2: Write the failing test** — `fluent/src/server/TriviaStatsTest.server.js`
 
 ```js
 var TriviaStatsTest = Class.create();
@@ -1724,13 +1733,12 @@ TriviaStatsTest.prototype = Object.extendsObject(TriviaTestBase, {
 - [ ] **Step 3: Register suite, deploy test + runner, verify FAIL**
 
 ```bash
-node tools/deploy-script.mjs tests/server/TriviaStatsTest.js
-node tools/deploy-script.mjs src/server/TriviaTestRunner.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: `FAIL TriviaStatsTest`, exit 1.
 
-- [ ] **Step 4: Write `src/server/TriviaStats.js`**
+- [ ] **Step 4: Write `fluent/src/server/TriviaStats.server.js`**
 
 ```js
 var TriviaStats = Class.create();
@@ -1825,17 +1833,17 @@ TriviaStats.prototype = {
 - [ ] **Step 5: Deploy, verify PASS**
 
 ```bash
-node tools/deploy-script.mjs src/server/TriviaStats.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: all PASS, exit 0.
 
-Now that TriviaStats exists, `TriviaEngine.finish()` rolls up the engine test's games, which would leave `famtriv.test` users in `player_stats`. Update `TriviaEngineTest._cleanup` to also delete `player_stats` and `player_category_stats` rows where `user.user_name STARTSWITH famtriv.test` (same `del`-style loop), redeploy `tests/server/TriviaEngineTest.js`, and re-run `node tools/run-tests.mjs` — expect all PASS.
+Now that TriviaStats exists, `TriviaEngine.finish()` rolls up the engine test's games, which would leave `famtriv.test` users in `player_stats`. Update `TriviaEngineTest._cleanup` to also delete `player_stats` and `player_category_stats` rows where `user.user_name STARTSWITH famtriv.test` (same `del`-style loop), redeploy `fluent/src/server/TriviaEngineTest.server.js`, and re-run `node tools/run-tests.mjs` — expect all PASS.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/server/TriviaStats.js src/server/TriviaTestRunner.js src/tables/game.json tests/server
+git add fluent/src/server
 git commit -m "feat: TriviaStats idempotent rollup with streaks and per-category counts (TDD)"
 ```
 
@@ -1844,8 +1852,8 @@ git commit -m "feat: TriviaStats idempotent rollup with streaks and per-category
 ### Task 10: TriviaPractice (TDD)
 
 **Files:**
-- Create: `src/server/TriviaPractice.js`, `tests/server/TriviaPracticeTest.js`
-- Modify: `src/server/TriviaTestRunner.js` (register `new TriviaPracticeTest()`)
+- Create: `fluent/src/server/TriviaPractice.server.js`, `fluent/src/server/TriviaPracticeTest.server.js`
+- Modify: `fluent/src/server/TriviaTestRunner.server.js` (register `new TriviaPracticeTest()`)
 
 **Interfaces:**
 - Consumes: `TriviaSelector.pickForUser` (pool `'practice'`), `TriviaSkill`, `TriviaScoring`, tables `practice_session`, `response`, `question`, `question_option`, `category`.
@@ -1855,7 +1863,7 @@ git commit -m "feat: TriviaStats idempotent rollup with streaks and per-category
   - `answerQuestion(sessionId, userId, questionId, optionId, answerMs)` → `{correct, points, correctOption: {id, text}}`; writes a `response` row with `practice=true` and NO game; updates `TriviaSkill`; increments session counters and accuracy.
   - `progress(userId)` → `{sessions: [{date, category, count, correct, accuracy}], ratings: [{categoryId, categoryName, accuracy, samples}]}` — only that user's data.
 
-- [ ] **Step 1: Write the failing test** — `tests/server/TriviaPracticeTest.js`
+- [ ] **Step 1: Write the failing test** — `fluent/src/server/TriviaPracticeTest.server.js`
 
 ```js
 var TriviaPracticeTest = Class.create();
@@ -1937,7 +1945,7 @@ TriviaPracticeTest.prototype = Object.extendsObject(TriviaTestBase, {
 
 - [ ] **Step 2: Register suite, deploy test + runner, verify FAIL** (same three commands as prior tasks). Expected: `FAIL TriviaPracticeTest`, exit 1.
 
-- [ ] **Step 3: Write `src/server/TriviaPractice.js`**
+- [ ] **Step 3: Write `fluent/src/server/TriviaPractice.server.js`**
 
 ```js
 var TriviaPractice = Class.create();
@@ -2063,12 +2071,12 @@ TriviaPractice.prototype = {
 };
 ```
 
-- [ ] **Step 4: Deploy, verify PASS** (`node tools/deploy-script.mjs src/server/TriviaPractice.js && node tools/run-tests.mjs`). Expected: all PASS, exit 0.
+- [ ] **Step 4: Deploy, verify PASS** (`(cd fluent && npm run build && npm run deploy) && node tools/run-tests.mjs`). Expected: all PASS, exit 0.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/server/TriviaPractice.js src/server/TriviaTestRunner.js tests/server/TriviaPracticeTest.js
+git add fluent/src/server/TriviaPractice.server.js fluent/src/server/TriviaTestRunner.server.js fluent/src/server/TriviaPracticeTest.server.js
 git commit -m "feat: TriviaPractice sessions feeding skill ratings and private progress (TDD)"
 ```
 
@@ -2118,7 +2126,7 @@ Run (Git Bash, substituting real values):
 curl -s -o /dev/null -w "%{http_code}" -u 'famtriv.testlogin:PASSWORD' \
   "$SN_INSTANCE/api/now/table/<SCOPE>_question?sysparm_limit=1"
 ```
-Expected: `403` (or `401` if the account can't log in at all). If this returns `200` with data, STOP and flag to the user: the instance's default ACLs are not protecting scoped tables, and read/write ACLs must be added in the instance UI (System Security → Access Control) before the game is used — correct answers would otherwise be queryable mid-game. Document the outcome in the README (Task 20).
+Expected: `403` (or `401` if the account can't log in at all). If this returns `200` with data, STOP and flag to the user: the instance's default ACLs are not protecting scoped tables, and read/write ACLs must be added in the instance UI (System Security → Access Control) before the game is used — correct answers would otherwise be queryable mid-game. Document the outcome in the README (Task 19).
 
 - [ ] **Step 4: Commit**
 
@@ -2282,7 +2290,7 @@ git commit -m "feat: portal scaffold, theme, widget/page deploy tooling"
 ### Task 13: Avatar gallery + Profile widget
 
 **Files:**
-- Create: `tools/seed-avatars.mjs`, `src/widgets/ft-profile/{widget.json,template.html,client.js,server.js,css.scss}`, `src/server/TriviaProfile.js`
+- Create: `tools/seed-avatars.mjs`, `src/widgets/ft-profile/{widget.json,template.html,client.js,server.js,css.scss}`, `fluent/src/server/TriviaProfile.server.js`
 
 **Interfaces:**
 - Consumes: tables `avatar`, `profile`; `sys_user` (name, photo); attachment API for uploads.
@@ -2318,7 +2326,7 @@ console.log('seeded 20 avatars');
 
 Run: `node tools/seed-avatars.mjs` → `seeded 20 avatars`; verify `node tools/sn-cli.mjs get <SCOPE>_avatar active=true name` shows 20.
 
-- [ ] **Step 2: Write `src/server/TriviaProfile.js`** and deploy
+- [ ] **Step 2: Write `fluent/src/server/TriviaProfile.server.js`** and deploy
 
 ```js
 var TriviaProfile = Class.create();
@@ -2393,7 +2401,7 @@ TriviaProfile.prototype = {
 };
 ```
 
-Run: `node tools/deploy-script.mjs src/server/TriviaProfile.js`
+Run: `(cd fluent && npm run build && npm run deploy)`
 
 - [ ] **Step 3: Write the profile widget** — `src/widgets/ft-profile/`
 
@@ -2516,7 +2524,7 @@ Open `<instance>/trivia?id=ft_profile` logged in as the admin: profile auto-crea
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tools/seed-avatars.mjs src/server/TriviaProfile.js src/widgets/ft-profile
+git add tools/seed-avatars.mjs fluent/src/server/TriviaProfile.server.js src/widgets/ft-profile
 git commit -m "feat: avatar gallery, TriviaProfile, and profile widget with 3 avatar sources"
 ```
 
@@ -2937,7 +2945,7 @@ node tools/deploy-widget.mjs src/widgets/ft-game
 node tools/ensure-page.mjs ft_game ft-game
 ```
 
-- [ ] **Step 3: Two-browser live test.** Seed at least 6 active game-pool questions in one category (Task 19 not done yet — insert via a quick script against `snc.mjs`, or run Task 19 first if preferred; the E2E seeding helper in Task 20 Step 1 can also be written early and used here). Then:
+- [ ] **Step 3: Two-browser live test.** Seed at least 6 active game-pool questions in one category (run Task 18 first if preferred, or insert them via a quick script against `snc.mjs` following the Task 14 category-seeding one-liner pattern). Then:
 1. Browser session A (admin): Home → New Game → pick category → Create Lobby. Code + QR render.
 2. Browser session B (different user or incognito with a second account): Home → Join with code. A's lobby shows B appear within ~3s (watch or poll).
 3. A starts. Both browsers flip to the question together; countdown runs; big touch targets.
@@ -3388,22 +3396,21 @@ git commit -m "feat: Open Trivia DB importer with category seeding and dedup"
 ### Task 19: End-to-end server test + README
 
 **Files:**
-- Create: `tests/server/TriviaE2ETest.js`, `README.md`
-- Modify: `src/server/TriviaTestRunner.js` (register `new TriviaE2ETest()`)
+- Create: `fluent/src/server/TriviaE2ETest.server.js`, `README.md`
+- Modify: `fluent/src/server/TriviaTestRunner.server.js` (register `new TriviaE2ETest()`)
 
 **Interfaces:**
 - Consumes: everything.
 - Produces: a full-lifecycle regression test runnable anytime via `node tools/run-tests.mjs`; project README.
 
-- [ ] **Step 1: Write `tests/server/TriviaE2ETest.js`** — the full-stack smoke test: seeds its own category/questions (reuse the `_seed`/`_cleanup` pattern from `TriviaEngineTest` verbatim), then: create adaptive game as user A → join as B → start → both answer every round (A always correct via `_correctOptionFor`, B always the wrong option) → force-finish via backdate+tick → assert: game finished; A is winner; A's `player_stats.total_wins` incremented by exactly 1 vs. before; B's `current_win_streak` is 0; a `skill_rating` row exists for both users in the test category; champion() returns A. Also assert practice isolation: run one practice answer for B in the test category and verify `player_stats` for B is UNCHANGED (practice never touches the leaderboard). Cleanup deletes all seeded data and famtriv.test stats rows.
+- [ ] **Step 1: Write `fluent/src/server/TriviaE2ETest.server.js`** — the full-stack smoke test: seeds its own category/questions (reuse the `_seed`/`_cleanup` pattern from `TriviaEngineTest` verbatim), then: create adaptive game as user A → join as B → start → both answer every round (A always correct via `_correctOptionFor`, B always the wrong option) → force-finish via backdate+tick → assert: game finished; A is winner; A's `player_stats.total_wins` incremented by exactly 1 vs. before; B's `current_win_streak` is 0; a `skill_rating` row exists for both users in the test category; champion() returns A. Also assert practice isolation: run one practice answer for B in the test category and verify `player_stats` for B is UNCHANGED (practice never touches the leaderboard). Cleanup deletes all seeded data and famtriv.test stats rows.
 
 The test class follows the exact same helper structure as `TriviaEngineTest` (`_scope`, `_ensureTestUser`, `_seed`, `_cleanup`, `_correctOptionFor`, `_backdateQuestionStart`) — copy those helpers in (each test class is standalone; there is no shared test utility include by design, so suites can be read in isolation).
 
 - [ ] **Step 2: Register, deploy, run**
 
 ```bash
-node tools/deploy-script.mjs tests/server/TriviaE2ETest.js
-node tools/deploy-script.mjs src/server/TriviaTestRunner.js
+(cd fluent && npm run build && npm run deploy)
 node tools/run-tests.mjs
 ```
 Expected: all suites PASS including `TriviaE2ETest`, exit 0.
@@ -3415,7 +3422,7 @@ Expected: all suites PASS including `TriviaE2ETest`, exit 0.
 - [ ] **Step 5: Final commit**
 
 ```bash
-git add tests/server/TriviaE2ETest.js src/server/TriviaTestRunner.js README.md
+git add fluent/src/server/TriviaE2ETest.server.js fluent/src/server/TriviaTestRunner.server.js README.md
 git commit -m "feat: end-to-end regression test and README"
 ```
 
