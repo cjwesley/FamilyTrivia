@@ -151,6 +151,22 @@ export const TriviaGroups = ScriptInclude({
     accessibleFrom: 'package_private',
 })
 
+export const TriviaRegistrationTest = ScriptInclude({
+    $id: Now.ID['trivia_registration_test_si'],
+    name: 'TriviaRegistrationTest',
+    script: Now.include('../server/TriviaRegistrationTest.server.js'),
+    description: 'Tests for TriviaRegistration invite-gated account creation.',
+    accessibleFrom: 'package_private',
+})
+
+export const TriviaRegistration = ScriptInclude({
+    $id: Now.ID['trivia_registration_si'],
+    name: 'TriviaRegistration',
+    script: Now.include('../server/TriviaRegistration.server.js'),
+    description: 'Invite-gated account creation: validate(token), register(token, nickname, email, password, ip) -- creates sys_user + player role + Profile + registration_log row, does not join the game.',
+    accessibleFrom: 'package_private',
+})
+
 export const TriviaE2ETest = ScriptInclude({
     $id: Now.ID['trivia_e2e_test_si'],
     name: 'TriviaE2ETest',
