@@ -1,0 +1,55 @@
+<div class="ft-app">
+  <div class="ft-row">
+    <div class="ft-avatar" ng-class="{'ft-champ': c.data.iAmChampion}"
+         ng-bind-html="c.trust(c.data.me.avatarHtml)"></div>
+    <div class="ft-grow" style="font-weight:700;">{{c.data.me.nickname}} <span ng-if="c.data.iAmChampion">👑</span></div>
+    <a href="?id=ft_profile" class="ft-dim">Edit</a>
+  </div>
+  <div class="ft-title">Family Trivia</div>
+  <div class="ft-card ft-row" ng-if="c.data.champion">
+    <div class="ft-avatar ft-pop" style="box-shadow:0 0 0 3px gold;"
+         ng-bind-html="c.trust(c.data.champion.avatarHtml)"></div>
+    <div class="ft-grow">
+      <div style="color:gold;font-weight:700;">🏆 Reigning Champion</div>
+      <div>{{c.data.champion.nickname}}</div>
+    </div>
+  </div>
+
+  <div ng-if="c.view === 'home'">
+    <button class="ft-btn" ng-click="c.view = 'new'">🎮 New Game</button>
+    <button class="ft-btn ft-secondary" ng-click="c.view = 'join'">🔑 Join Game</button>
+    <button class="ft-btn ft-secondary" onclick="window.location='?id=ft_practice'">🧠 Practice</button>
+    <button class="ft-btn ft-secondary" onclick="window.location='?id=ft_leaderboard'">🥇 Leaderboard</button>
+    <button class="ft-btn ft-secondary" onclick="window.location='?id=ft_progress'">📈 My Progress</button>
+  </div>
+
+  <div ng-if="c.view === 'new'" class="ft-card">
+    <div class="ft-dim">Mode</div>
+    <div class="ft-tabs">
+      <button class="ft-tab" ng-class="{'ft-on': c.opts.mode === 'uniform'}" ng-click="c.opts.mode = 'uniform'">Everyone Same</button>
+      <button class="ft-tab" ng-class="{'ft-on': c.opts.mode === 'adaptive'}" ng-click="c.opts.mode = 'adaptive'">Skill-Matched</button>
+    </div>
+    <div class="ft-dim" style="margin-top:8px;">Categories</div>
+    <div class="ft-tabs" style="flex-wrap:wrap;">
+      <button class="ft-tab" ng-repeat="cat in c.data.categories"
+              ng-class="{'ft-on': c.opts.categories.indexOf(cat.id) >= 0}"
+              ng-click="c.toggleCat(cat.id)">{{cat.icon}} {{cat.name}}</button>
+    </div>
+    <div class="ft-dim" style="margin-top:8px;">Questions: {{c.opts.questionCount}}</div>
+    <input type="range" min="5" max="20" step="1" ng-model="c.opts.questionCount" style="width:100%;" />
+    <div class="ft-dim">Seconds per question: {{c.opts.secondsPerQuestion}}</div>
+    <input type="range" min="10" max="60" step="5" ng-model="c.opts.secondsPerQuestion" style="width:100%;" />
+    <div style="color:var(--ft-red);" ng-if="c.err">{{c.err}}</div>
+    <button class="ft-btn" style="margin-top:10px;" ng-click="c.create()">Create Lobby</button>
+    <button class="ft-btn ft-secondary" ng-click="c.view = 'home'; c.err = ''">Cancel</button>
+  </div>
+
+  <div ng-if="c.view === 'join'" class="ft-card">
+    <input class="form-control" ng-model="c.joinCode" placeholder="CODE" maxlength="4"
+           style="text-transform:uppercase;font-size:28px;text-align:center;letter-spacing:8px;border-radius:12px;"
+           autocapitalize="characters" autocomplete="off" />
+    <div style="color:var(--ft-red);margin-top:6px;" ng-if="c.err">{{c.err}}</div>
+    <button class="ft-btn" style="margin-top:10px;" ng-click="c.join()">Join</button>
+    <button class="ft-btn ft-secondary" ng-click="c.view = 'home'; c.err = ''">Cancel</button>
+  </div>
+</div>
