@@ -99,6 +99,7 @@ export const x_tekvo_famtriv_game = Table({
         question_started_at: DateTimeColumn({ label: 'Question Started At' }),
         reveal_started_at: DateTimeColumn({ label: 'Reveal Started At' }),
         winner: ReferenceColumn({ label: 'Winner', referenceTable: 'sys_user' }),
+        rolled_up: BooleanColumn({ label: 'Stats Rolled Up', default: false }),
     },
     allowWebServiceAccess: true,
 })

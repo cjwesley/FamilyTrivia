@@ -49,6 +49,14 @@ declare global {
                         table: 'sys_module'
                         id: 'fe3f34a608b740728be3f2a9896d99e6'
                     }
+                    src_server_TriviaStats_server_js: {
+                        table: 'sys_module'
+                        id: '5faa5318919d4cc5a968aa2f513c6ebf'
+                    }
+                    src_server_TriviaStatsTest_server_js: {
+                        table: 'sys_module'
+                        id: 'e013c0608fc546c8adf57d8794561404'
+                    }
                     src_server_TriviaTestBase_server_js: {
                         table: 'sys_module'
                         id: '2922fd082bff44db9ec184370ee0ac3c'
@@ -92,6 +100,14 @@ declare global {
                     trivia_skill_test_si: {
                         table: 'sys_script_include'
                         id: 'd810e14db19d4fcbb7aa468f62935284'
+                    }
+                    trivia_stats_si: {
+                        table: 'sys_script_include'
+                        id: '8eeaf7de77c14633ab3b767c3c52b32d'
+                    }
+                    trivia_stats_test_si: {
+                        table: 'sys_script_include'
+                        id: '30116dd827f345b0b026290f76c2957f'
                     }
                     trivia_test_base_si: {
                         table: 'sys_script_include'
@@ -1512,6 +1528,15 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_documentation'
+                        id: 'cab0dd55933e4481a0c752d0241f59f1'
+                        key: {
+                            name: 'x_tekvo_famtriv_game'
+                            element: 'rolled_up'
+                            language: 'en'
+                        }
+                    },
+                    {
                         table: 'sys_dictionary'
                         id: 'cb34701df516428ca864692a361ee916'
                         key: {
@@ -1901,6 +1926,14 @@ declare global {
                             name: 'x_tekvo_famtriv_avatar'
                             element: 'svg'
                             language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: 'fb983102ef844294abef761032e27c2e'
+                        key: {
+                            name: 'x_tekvo_famtriv_game'
+                            element: 'rolled_up'
                         }
                     },
                     {

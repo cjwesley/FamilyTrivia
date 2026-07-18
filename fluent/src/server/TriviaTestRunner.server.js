@@ -7,8 +7,8 @@ TriviaTestRunner.prototype = {
       new TriviaScoringTest(),
       new TriviaSkillTest(),
       new TriviaSelectorTest(),
-      new TriviaEngineTest()
-      // Task 9 adds: , new TriviaStatsTest()
+      new TriviaEngineTest(),
+      new TriviaStatsTest()
       // Task 10 adds: , new TriviaPracticeTest()
       // Task 19 adds: , new TriviaE2ETest()
     ];

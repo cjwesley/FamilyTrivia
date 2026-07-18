@@ -44,6 +44,12 @@ TriviaEngineTest.prototype = Object.extendsObject(TriviaTestBase, {
     del('question_option', 'question.category', catId);
     del('question', 'category', catId);
     del('category', 'sys_id', catId);
+    var statsTables = ['player_stats', 'player_category_stats'];
+    for (var st = 0; st < statsTables.length; st++) {
+      var sgr = new GlideRecord(s + '_' + statsTables[st]);
+      sgr.addQuery('user.user_name', 'STARTSWITH', 'famtriv.test'); sgr.query();
+      while (sgr.next()) sgr.deleteRecord();
+    }
     // games created by tests: host is a famtriv.test user
     var g = new GlideRecord(s + '_game');
     g.addQuery('host.user_name', 'STARTSWITH', 'famtriv.test'); g.query();

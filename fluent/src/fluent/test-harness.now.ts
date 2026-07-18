@@ -79,6 +79,14 @@ export const TriviaSelector = ScriptInclude({
     accessibleFrom: 'package_private',
 })
 
+export const TriviaStatsTest = ScriptInclude({
+    $id: Now.ID['trivia_stats_test_si'],
+    name: 'TriviaStatsTest',
+    script: Now.include('../server/TriviaStatsTest.server.js'),
+    description: 'Tests for TriviaStats leaderboard rollup and champion data.',
+    accessibleFrom: 'package_private',
+})
+
 export const TriviaEngineTest = ScriptInclude({
     $id: Now.ID['trivia_engine_test_si'],
     name: 'TriviaEngineTest',
@@ -92,5 +100,13 @@ export const TriviaEngine = ScriptInclude({
     name: 'TriviaEngine',
     script: Now.include('../server/TriviaEngine.server.js'),
     description: 'Game-lifecycle engine: create/join/start/answer/tick/advance/finish/getState/champion.',
+    accessibleFrom: 'package_private',
+})
+
+export const TriviaStats = ScriptInclude({
+    $id: Now.ID['trivia_stats_si'],
+    name: 'TriviaStats',
+    script: Now.include('../server/TriviaStats.server.js'),
+    description: 'Leaderboard rollup: rollupGame(gameId) idempotent stats aggregation, leaderboard() ranked rows + per-category.',
     accessibleFrom: 'package_private',
 })
