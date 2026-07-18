@@ -110,3 +110,19 @@ export const TriviaStats = ScriptInclude({
     description: 'Leaderboard rollup: rollupGame(gameId) idempotent stats aggregation, leaderboard() ranked rows + per-category.',
     accessibleFrom: 'package_private',
 })
+
+export const TriviaPracticeTest = ScriptInclude({
+    $id: Now.ID['trivia_practice_test_si'],
+    name: 'TriviaPracticeTest',
+    script: Now.include('../server/TriviaPracticeTest.server.js'),
+    description: 'Tests for TriviaPractice solo practice sessions.',
+    accessibleFrom: 'package_private',
+})
+
+export const TriviaPractice = ScriptInclude({
+    $id: Now.ID['trivia_practice_si'],
+    name: 'TriviaPractice',
+    script: Now.include('../server/TriviaPractice.server.js'),
+    description: 'Solo practice sessions: startSession/nextQuestion/answerQuestion/progress feeding TriviaSkill ratings.',
+    accessibleFrom: 'package_private',
+})
