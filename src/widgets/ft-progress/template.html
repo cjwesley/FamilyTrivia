@@ -1,0 +1,27 @@
+<div class="ft-app">
+  <div class="ft-title">📈 My Progress</div>
+  <div class="ft-card">
+    <div class="ft-dim" style="margin-bottom:8px;">Skill by category (drives Skill-Matched mode)</div>
+    <div class="ft-row" ng-repeat="r in c.data.progress.ratings">
+      <div class="ft-grow">{{r.categoryName}}</div>
+      <div style="color:var(--ft-accent);letter-spacing:2px;">{{c.stars(r.accuracy)}}</div>
+      <div class="ft-dim">{{c.pct(r.accuracy)}}</div>
+    </div>
+    <div class="ft-dim" ng-if="!c.data.progress.ratings.length" style="text-align:center;">
+      Play or practice to build your skill profile!
+    </div>
+  </div>
+  <div class="ft-card">
+    <div class="ft-dim" style="margin-bottom:8px;">Recent practice sessions</div>
+    <div class="ft-row" ng-repeat="s in c.data.progress.sessions">
+      <div class="ft-grow">
+        <div>{{s.category}}</div>
+        <div class="ft-dim">{{s.date}}</div>
+      </div>
+      <div style="font-weight:800;">{{s.correct}}/{{s.count}}</div>
+    </div>
+    <div class="ft-dim" ng-if="!c.data.progress.sessions.length" style="text-align:center;">No sessions yet.</div>
+  </div>
+  <a class="ft-btn" href="?id=ft_practice">Practice now</a>
+  <a class="ft-btn ft-secondary" href="?id=ft_home" style="text-align:center;">← Home</a>
+</div>

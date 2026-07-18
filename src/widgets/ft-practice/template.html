@@ -1,0 +1,43 @@
+<div class="ft-app">
+  <div ng-if="c.view === 'setup'">
+    <div class="ft-title">🧠 Practice</div>
+    <div class="ft-card">
+      <div class="ft-dim">Category</div>
+      <div class="ft-tabs" style="flex-wrap:wrap;">
+        <button class="ft-tab" ng-class="{'ft-on': c.categoryId === ''}" ng-click="c.categoryId = ''">🌀 All</button>
+        <button class="ft-tab" ng-repeat="cat in c.data.categories"
+                ng-class="{'ft-on': c.categoryId === cat.id}" ng-click="c.categoryId = cat.id">{{cat.icon}} {{cat.name}}</button>
+      </div>
+    </div>
+    <button class="ft-btn" ng-click="c.start()">Start Drilling</button>
+    <a class="ft-btn ft-secondary" href="?id=ft_home" style="text-align:center;">← Home</a>
+  </div>
+
+  <div ng-if="c.view === 'question'">
+    <div class="ft-dim">{{c.q.icon}} {{c.q.category}} · difficulty {{c.q.difficulty}}/5 · {{c.correct}}/{{c.count}} so far</div>
+    <div class="ft-card"><div style="font-size:20px;font-weight:700;">{{c.q.text}}</div></div>
+    <button class="ft-btn ft-option" ng-repeat="o in c.q.options" ng-click="c.answer(o.id)">{{o.text}}</button>
+    <button class="ft-btn ft-secondary" ng-click="c.stop()">End session</button>
+  </div>
+
+  <div ng-if="c.view === 'feedback'">
+    <div class="ft-card" style="text-align:center;">
+      <div class="ft-pop" style="font-size:48px;">{{c.result.correct ? '✅' : '❌'}}</div>
+      <div ng-if="!c.result.correct">Answer: <b style="color:var(--ft-green);">{{c.result.correctOption.text}}</b></div>
+      <div class="ft-dim" ng-if="c.result.correct">+{{c.result.points}} practice points</div>
+    </div>
+    <button class="ft-btn" ng-click="c.next()">Next →</button>
+    <button class="ft-btn ft-secondary" ng-click="c.stop()">End session</button>
+  </div>
+
+  <div ng-if="c.view === 'done'">
+    <div class="ft-title">Session complete</div>
+    <div class="ft-card" style="text-align:center;">
+      <div style="font-size:40px;">{{c.pct()}}</div>
+      <div class="ft-dim">{{c.correct}} of {{c.count}} correct</div>
+    </div>
+    <a class="ft-btn" href="?id=ft_progress">See My Progress</a>
+    <button class="ft-btn ft-secondary" ng-click="c.view = 'setup'">Practice again</button>
+    <a class="ft-btn ft-secondary" href="?id=ft_home" style="text-align:center;">← Home</a>
+  </div>
+</div>
