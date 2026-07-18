@@ -69,8 +69,24 @@ api.controller = function($scope, $interval, $timeout, $sce, spUtil) {
       if (c.st.reveal[i].userId === c.data.me) return c.st.reveal[i];
     return null;
   };
+  c.inviteLink = function() {
+    return location.origin + '/trivia?id=ft_join&t=' + c.st.inviteToken;
+  };
   c.qrUrl = function() {
-    var join = location.origin + '/trivia?id=ft_game&g=' + c.data.gameId;
-    return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(join);
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(c.inviteLink());
+  };
+  c.copied = false;
+  c.showCopyFallback = false;
+  c.copyInvite = function() {
+    var link = c.inviteLink();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(function() {
+        $scope.$applyAsync(function() { c.copied = true; c.showCopyFallback = false; });
+      }, function() {
+        $scope.$applyAsync(function() { c.showCopyFallback = true; });
+      });
+    } else {
+      c.showCopyFallback = true;
+    }
   };
 };

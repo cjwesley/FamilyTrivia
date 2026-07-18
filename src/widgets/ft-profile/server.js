@@ -6,7 +6,16 @@
   }
   data.profile = prof.getOrCreate(me);
   data.card = prof.card(me);
-  data.champion = new TriviaEngine().champion().userId === me;
+
+  // group-aware champion check: show the crown if the user is the reigning
+  // champion in ANY of their groups (champion is per-group, not global).
+  var eng = new TriviaEngine();
+  var myGroups = new TriviaGroups().userGroups(me);
+  data.champion = false;
+  for (var i = 0; i < myGroups.length; i++) {
+    if (eng.champion(myGroups[i].id).userId === me) { data.champion = true; break; }
+  }
+
   data.avatars = [];
   var a = new GlideRecord(gs.getCurrentScopeName() + '_avatar');
   a.addQuery('active', true); a.orderBy('order'); a.query();

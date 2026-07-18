@@ -1,0 +1,45 @@
+<div class="ft-app">
+  <div class="ft-title">Family Trivia</div>
+
+  <!-- authenticated + valid lobby token: redirecting via client.js -->
+  <div class="ft-card" ng-if="c.data.redirect" style="text-align:center;">
+    <div class="ft-pop" style="font-size:40px;">🎮</div>
+    <div>Joining the game…</div>
+  </div>
+
+  <!-- dead link: invalid token, or a token whose game isn't in lobby anymore -->
+  <div class="ft-card" ng-if="!c.data.redirect && c.data.invite && !c.data.invite.ok" style="text-align:center;">
+    <div style="font-size:40px;">🔗</div>
+    <div style="font-weight:700;margin-top:8px;">{{c.reasonMessage(c.data.invite.reason)}}</div>
+    <a class="ft-btn ft-secondary" style="margin-top:14px;" href="/trivia">Go to Family Trivia</a>
+  </div>
+
+  <!-- guest + valid lobby token: log in or create a player account -->
+  <div ng-if="!c.data.redirect && !c.data.authenticated && c.data.invite.ok">
+
+    <div class="ft-card" ng-if="!c.registered" style="text-align:center;">
+      <div style="font-weight:700;">You're invited to play!</div>
+      <div class="ft-dim" style="margin-top:4px;">Already have an account?</div>
+      <a class="ft-btn" style="margin-top:8px;" ng-href="{{c.loginUrl}}">Log in to join</a>
+    </div>
+
+    <div class="ft-card" ng-if="c.registered" style="text-align:center;">
+      <div style="font-size:40px;">✅</div>
+      <div style="font-weight:700;margin-top:6px;">Account created — log in to join the game</div>
+      <a class="ft-btn" style="margin-top:12px;" ng-href="{{c.loginUrl}}">Log in</a>
+    </div>
+
+    <div class="ft-card" ng-if="!c.registered">
+      <div style="font-weight:700;margin-bottom:8px;">New here? Create your player account</div>
+      <input class="form-control" type="text" placeholder="Nickname" ng-model="c.form.nickname"
+             autocomplete="off" style="margin-bottom:8px;" />
+      <input class="form-control" type="email" placeholder="Email" ng-model="c.form.email"
+             autocomplete="off" style="margin-bottom:8px;" />
+      <input class="form-control" type="password" placeholder="Password" ng-model="c.form.password"
+             autocomplete="new-password" style="margin-bottom:8px;" />
+      <div style="color:var(--ft-red);margin-bottom:6px;" ng-if="c.err">{{c.err}}</div>
+      <button class="ft-btn" ng-click="c.register()" ng-disabled="c.busy">Create your player account</button>
+    </div>
+
+  </div>
+</div>

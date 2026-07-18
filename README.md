@@ -26,7 +26,7 @@ Two toolchains own disjoint record sets — never edit the same record from both
 - **`tools/`** — Node scripts (native `fetch`). Own Service Portal records
   (`sp_widget`/`sp_page`/`sp_portal`/`sp_theme`), the test-runner REST
   endpoint, the hourly cleanup job, and seed data (avatars, OTDB questions).
-- **`src/widgets/<id>/`** — the 6 Service Portal widgets, deployed by
+- **`src/widgets/<id>/`** — the 7 Service Portal widgets, deployed by
   `tools/deploy-widget.mjs`.
 
 Server code is ES5 (Rhino). Client widget code is AngularJS 1.x. Live sync
@@ -70,7 +70,11 @@ for w in ft-profile ft-home ft-game ft-leaderboard ft-practice ft-progress; do
 done
 node tools/create-portal.mjs        # re-run: backfills homepage now ft_home exists
 node tools/seed-avatars.mjs         # 20-avatar gallery
-# then: import/activate questions (next section)
+
+node tools/deploy-widget.mjs src/widgets/ft-join   # public join page widget
+node tools/ensure-page.mjs ft_join ft-join public
+node tools/create-register-api.mjs                 # public registration REST endpoint
+# then: import/activate questions (next section); groups are admin-created (see Groups)
 ```
 Every step is idempotent (`ensure()` = query-then-insert/patch) — safe to
 re-run any of it.
@@ -82,11 +86,12 @@ cd fluent && npm run build && npm run deploy && cd ..
 node tools/run-tests.mjs
 ```
 
-Expected: `8 suites / 22 tests`, all `PASS`, exit `0` (`TriviaHarnessTest`,
+Expected: `10 suites / 38 tests`, all `PASS`, exit `0` (`TriviaHarnessTest`,
 `TriviaScoringTest`, `TriviaSkillTest`, `TriviaSelectorTest`,
 `TriviaEngineTest`, `TriviaStatsTest`, `TriviaPracticeTest`,
-`TriviaE2ETest`). TDD loop: edit test → build+deploy → run (expect FAIL) →
-edit implementation → build+deploy → run (expect PASS) → commit.
+`TriviaGroupsTest`, `TriviaRegistrationTest`, `TriviaE2ETest`). TDD loop:
+edit test → build+deploy → run (expect FAIL) → edit implementation →
+build+deploy → run (expect PASS) → commit.
 
 `run-tests.mjs` does not hit `/api/<scope>/ftest/run` — the instance derives
 `sys_ws_definition.namespace` from the **vendor-prefix** substring of the
@@ -124,6 +129,34 @@ x_tekvo_famtriv.admin   sys_id b1ab0bc2eefb4f8ab68ecf10f956f556  — manage ques
 Grant via `sys_user_has_role`, or User Administration > Users > Roles related
 list — `player` for every family member who plays, `admin` for whoever manages config.
 
+## Groups
+
+Competition data is siloed into admin-created **groups** (Family, college friends, coworkers, ...) — every leaderboard, streak, and champion is scoped to exactly one.
+
+- **Creation is admin-only**: platform list `<instance>/x_tekvo_famtriv_group_list.do` (`name`, `owner` = sys_user ref, `active`). No in-app creation UI (YAGNI — see spec's Out of Scope).
+- **Membership grows through play**: joining a game — by code, invite link, or self-registration — auto-joins its group too (`TriviaGroups.ensureMember`, idempotent). Admins can also add members via `x_tekvo_famtriv_group_member_list.do`.
+- **Silo semantics** — per-group: games, wins, points, correct counts, streaks, champion, all 5 leaderboard views (`player_stats`/`player_category_stats` keyed `(user, group[, category])`). Personal, follows the user everywhere: profile, skill ratings, practice, My Progress.
+
+## Invites & self-registration
+
+Lobby share row → QR + "Copy invite link", both encoding `<instance>/trivia?id=ft_join&t=<game.invite_token>`.
+
+- **Token**: 40 chars (`gs.generateGUID()` x2, truncated), one per game, single-game, valid only in `lobby` state, never displayed — only embedded in the link/QR. No separate expiry job: the hourly stale-game cleanup (`node tools/create-cleanup-job.mjs`) flips untouched lobby/in-progress games to `finished` after an hour, which silently expires the token too (`TriviaRegistration.validate` then returns `not_lobby`).
+- **Flow**: authenticated → straight into the lobby (`ensureJoined`). Guest → public existence-only card, **Log in** or **Create your player account** (nickname/email/password → registration endpoint). Both paths return via `/login.do?sysparm_goto_url=<encoded /trivia?id=ft_join&t=...>`, so new accounts authenticate through standard instance login before `ensureJoined` runs — no auto-login code.
+- **Caps** (`TriviaRegistration._capsExceeded`, checked before any insert): 30/hour global, 15/game, 10/hour/IP.
+- **Audit/bulk-disable**: every registration writes a `registration_log` row (user, game, ip) — that table, not a `u_created_via` marker, is the index; query `x_tekvo_famtriv_registration_log_list.do` directly.
+- **Test residue**: run `node tools/cleanup-famtriv-test-users.mjs` after any test run touching registration — `TriviaRegistrationTest`'s throwaway `@famtriv-test.example` accounts can't be cross-scope-deleted by the app.
+- **Kill switch**: registration endpoint = `sys_ws_operation` sys_id `b7b7502b0fc243d0b5cb2cf300d1b2e7` (`POST /api/tekvo/ftreg/register`, public).
+  ```bash
+  node -e "import('./tools/snc.mjs').then(m => m.update('sys_ws_operation', 'b7b7502b0fc243d0b5cb2cf300d1b2e7', { active: 'false' }))"
+  ```
+- **HARD GATE**: the session-auth ACL check (below) must return `403` before real outside registrations go live — log in as a roleless test account through the *portal* (session cookie + `X-UserToken`/`window.g_ck`, not Basic Auth):
+  ```bash
+  curl -s -o /dev/null -w "%{http_code}" -H "Cookie: <portal session cookie>" -H "X-UserToken: <window.g_ck>" \
+    "$SN_INSTANCE/api/now/table/x_tekvo_famtriv_question?sysparm_limit=1"
+  ```
+  Not yet run (see Security posture) — until it is, this flow stays family-only.
+
 ## Security posture
 
 - **Basic-auth vector: closed.** Table API access via HTTP Basic Auth is
@@ -138,12 +171,18 @@ list — `player` for every family member who plays, `admin` for whoever manages
 
 ## Known items
 
-- **Emoji storage**: string columns are `utf8mb3` (no native 4-byte UTF-8),
-  so astral-plane category icons store FDD6/FDD7-surrogate + base64
-  mangled rather than literal codepoints — an instance quirk, not app code.
-  Verify icons render correctly client-side.
-- **QR codes** for join links render via the external `api.qrserver.com`
-  image API — needs outbound network access, no local fallback.
+- **Emoji storage**: string columns ≤255 chars are `utf8mb3` (4-byte emoji get
+  FDD6/FDD7+base64-mangled). Fixed for `category.icon` and `profile.nickname`
+  by widening them past 255 (they store text-typed, native UTF-8). Any FUTURE
+  short string column that might carry emoji must be >255 too
+  (regression-locked by `TriviaEngineTest.testCategoryIconRoundTrip`).
+- **QR codes** render via the external `api.qrserver.com` image API — which
+  means the game's **invite token travels to that third party** on every lobby
+  render. ACCEPTED RISK (final review, 2026-07-18): tokens are single-game,
+  lobby-only, expire ≤1h via the stale-game cleanup, and gate only rate-capped
+  player-role registration. Backlog: vendor a local JS QR generator into
+  ft-game to remove the egress entirely. If the QR image fails to load, the
+  copy-link button and 4-char code still work.
 - **`spUtil.recordWatch`** may or may not fire depending on instance
   AMB/plugin config; the game widget always falls back to a 3s poll too,
   so gameplay works either way — just less snappy on poll.

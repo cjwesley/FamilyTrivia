@@ -25,6 +25,14 @@ declare global {
                         table: 'sys_module'
                         id: '54cf12f3ce62405391b779084c65f54f'
                     }
+                    src_server_TriviaGroups_server_js: {
+                        table: 'sys_module'
+                        id: 'fb89b3d222824b5ea9d4435c030d5e0e'
+                    }
+                    src_server_TriviaGroupsTest_server_js: {
+                        table: 'sys_module'
+                        id: 'a66b303644c948d2a015c1b3d3c1eaab'
+                    }
                     src_server_TriviaHarnessTest_server_js: {
                         table: 'sys_module'
                         id: 'e628c95cb9ab4a26a1d119bc753c4bc8'
@@ -40,6 +48,14 @@ declare global {
                     src_server_TriviaProfile_server_js: {
                         table: 'sys_module'
                         id: '43e76e5cb569414caf978275ce83bb6b'
+                    }
+                    src_server_TriviaRegistration_server_js: {
+                        table: 'sys_module'
+                        id: 'e7c3dd5b2b14456886d77b236e0f057b'
+                    }
+                    src_server_TriviaRegistrationTest_server_js: {
+                        table: 'sys_module'
+                        id: 'cb87c148c69d4dae8f3cef66561f7663'
                     }
                     src_server_TriviaScoring_server_js: {
                         table: 'sys_module'
@@ -93,6 +109,14 @@ declare global {
                         table: 'sys_script_include'
                         id: '22929dbd7e72428ab40db1f6eb51124d'
                     }
+                    trivia_groups_si: {
+                        table: 'sys_script_include'
+                        id: 'e9b61f34c2084e9ebc0d977c703ab0fd'
+                    }
+                    trivia_groups_test_si: {
+                        table: 'sys_script_include'
+                        id: 'ea1109f9c03047f5919d786bf8edbb45'
+                    }
                     trivia_harness_test_si: {
                         table: 'sys_script_include'
                         id: '78266459e9514e41821867375a74307a'
@@ -108,6 +132,14 @@ declare global {
                     trivia_profile_si: {
                         table: 'sys_script_include'
                         id: 'd7a14bd5daea4b699076d8d1d909fbb3'
+                    }
+                    trivia_registration_si: {
+                        table: 'sys_script_include'
+                        id: 'aa4a1dec76514973a6feea12b9652c26'
+                    }
+                    trivia_registration_test_si: {
+                        table: 'sys_script_include'
+                        id: 'f3ab492dd9db4555a2baf16f05314c04'
                     }
                     trivia_scoring_si: {
                         table: 'sys_script_include'
@@ -235,11 +267,27 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_documentation'
+                        id: '08ce31ca9bc24717b2516e5d1b4ff253'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
+                            element: 'active'
+                            language: 'en'
+                        }
+                    },
+                    {
                         table: 'sys_dictionary'
                         id: '09afb8bafc8e4662b1903f974e81cc21'
                         key: {
                             name: 'x_tekvo_famtriv_practice_session'
                             element: 'correct_count'
+                        }
+                    },
+                    {
+                        table: 'ua_table_licensing_config'
+                        id: '0b8cd21adf9e4d0eb7a5bd0cdb93f107'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
                         }
                     },
                     {
@@ -418,6 +466,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: '1a736210701449e8a15dc311f3cf0427'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
+                            element: 'name'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: '1ff34774350f456a9c7e9377a21e8111'
                         key: {
@@ -440,6 +496,14 @@ declare global {
                         key: {
                             name: 'x_tekvo_famtriv_skill_rating'
                             element: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: '222ead5938634b0b8a9428d7f437e5f6'
+                        key: {
+                            name: 'x_tekvo_famtriv_player_stats'
+                            element: 'group'
                         }
                     },
                     {
@@ -527,6 +591,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: '2ee8461165b5417c95877b9eca638808'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
+                            element: 'ip'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: '30cb8056134f4c92977d3b4c30adf8f7'
                         key: {
@@ -608,6 +680,15 @@ declare global {
                         key: {
                             name: 'x_tekvo_famtriv_game_player'
                             element: 'place'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: '3a8600402e0f47adadadcc3c1d100e9b'
+                        key: {
+                            name: 'x_tekvo_famtriv_game'
+                            element: 'group'
                             language: 'en'
                         }
                     },
@@ -765,6 +846,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: '52c51e81476842bb8b188f51bd0727f4'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                            element: 'group'
+                        }
+                    },
+                    {
                         table: 'ua_table_licensing_config'
                         id: '542e6b4e8e0c479fbaf6bb2c374e497b'
                         key: {
@@ -914,6 +1003,15 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_documentation'
+                        id: '6bf46aada0c34b7aa9f434e6b11efaab'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
+                            element: 'owner'
+                            language: 'en'
+                        }
+                    },
+                    {
                         table: 'sys_db_object'
                         id: '6c42e66ff9ae441da4e9a9b708357aeb'
                         key: {
@@ -1038,6 +1136,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: '79a8a6d29dae42aea1941caac477e05b'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
+                            element: 'NULL'
+                        }
+                    },
+                    {
                         table: 'ua_table_licensing_config'
                         id: '7a06c2eb00ee425eb2e2a9b57cff499d'
                         key: {
@@ -1095,6 +1201,30 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: '8067c12c55c0438bbc694904a933ccae'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
+                            element: 'owner'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: '81e3a8237bc245698c85edfabb26f495'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                            element: 'joined_on'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: '8394a11e01264d658e226c973ca436d8'
+                        key: {
+                            name: 'x_tekvo_famtriv_game'
+                            element: 'group'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: '880bc7ce85e547378459a5d4c496c641'
                         key: {
@@ -1137,11 +1267,28 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: '8fcd4332ff6a4cda9b20ace1e4bcadd4'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
+                            element: 'user'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: '90daccec3c5c468fb3f588c0f6adbdeb'
                         key: {
                             name: 'x_tekvo_famtriv_player_stats'
                             element: 'current_win_streak'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: '91aa711129bd4defa1c3574372399f77'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
+                            element: 'ip'
                             language: 'en'
                         }
                     },
@@ -1234,6 +1381,24 @@ declare global {
                     },
                     {
                         table: 'sys_documentation'
+                        id: '9a325ebbf7094b1cb40a22c9f82d7758'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
+                            element: 'game'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: '9a983f8ba4344177a31f2118855f751e'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
+                            element: 'user'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
                         id: '9b29661bb7ec46bda0a808982bf145e2'
                         key: {
                             name: 'x_tekvo_famtriv_profile'
@@ -1254,6 +1419,24 @@ declare global {
                         id: '9c5b9ad5ddfa46f28e24a9323f007109'
                         key: {
                             name: 'x_tekvo_famtriv_game_question'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'a029c41e72a742b2b7c97ee87a417c0f'
+                        key: {
+                            name: 'x_tekvo_famtriv_player_category_stats'
+                            element: 'group'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'a103fd28fde745ecb978b2a03ca14ed7'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                            element: 'NULL'
+                            language: 'en'
                         }
                     },
                     {
@@ -1323,6 +1506,31 @@ declare global {
                         }
                     },
                     {
+                        table: 'ua_table_licensing_config'
+                        id: 'aa53872e6366449692847d1fca2ee541'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'aa9cd53b041348c18c8bdb5fbf201d24'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                            element: 'group'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'abf536e0558043d6a34364cb08667900'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
+                            element: 'NULL'
+                            language: 'en'
+                        }
+                    },
+                    {
                         table: 'sys_db_object'
                         id: 'acb7087ddb564a4a80e2c871ac36b9d4'
                         key: {
@@ -1336,6 +1544,13 @@ declare global {
                             name: 'x_tekvo_famtriv_question'
                             element: 'category'
                             language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_db_object'
+                        id: 'aee7ac8516e3457e836350ba9eee6fb1'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
                         }
                     },
                     {
@@ -1372,6 +1587,15 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_documentation'
+                        id: 'b1ab05af0e01423c9adff36420e609f9'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                            element: 'joined_on'
+                            language: 'en'
+                        }
+                    },
+                    {
                         table: 'sys_user_role'
                         id: 'b1ab0bc2eefb4f8ab68ecf10f956f556'
                         key: {
@@ -1404,12 +1628,43 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: 'b5485d1a513a433c87e25dc71240fb2a'
+                        key: {
+                            name: 'x_tekvo_famtriv_game'
+                            element: 'invite_token'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: 'b6195c96eb5f4af9a650b5ef3e2a6b49'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
+                            element: 'game'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: 'b636e5740870418688373e073a3f0480'
                         key: {
                             name: 'x_tekvo_famtriv_game'
                             element: 'host'
                             language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: 'b71063627dab4a7191bfc474a8b3a962'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
+                            element: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sys_db_object'
+                        id: 'b82acb91aa394f6ea3185f5d0d8bbf42'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
                         }
                     },
                     {
@@ -1425,6 +1680,15 @@ declare global {
                         key: {
                             name: 'x_tekvo_famtriv_question_option'
                             element: 'correct'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'ba183ef652234d898f111f2cc3cace2a'
+                        key: {
+                            name: 'x_tekvo_famtriv_game'
+                            element: 'invite_token'
+                            language: 'en'
                         }
                     },
                     {
@@ -1449,6 +1713,15 @@ declare global {
                         key: {
                             name: 'x_tekvo_famtriv_question'
                             element: 'active'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'be699d92890a4f39b11285f6253d1f5e'
+                        key: {
+                            name: 'x_tekvo_famtriv_player_stats'
+                            element: 'group'
                             language: 'en'
                         }
                     },
@@ -1519,6 +1792,15 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_documentation'
+                        id: 'c799a5622816493cb1003226b7354449'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
+                            element: 'name'
+                            language: 'en'
+                        }
+                    },
+                    {
                         table: 'sys_dictionary'
                         id: 'c80df8b5070e44e9b9ef96cb565efc4a'
                         key: {
@@ -1574,6 +1856,13 @@ declare global {
                         key: {
                             name: 'x_tekvo_famtriv_avatar'
                             element: 'active'
+                        }
+                    },
+                    {
+                        table: 'ua_table_licensing_config'
+                        id: 'cb65d2a4e2b14dbfaba758703e2c3566'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
                         }
                     },
                     {
@@ -1636,6 +1925,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: 'd26512a11a8743698a6fd4bf2bbba93b'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                            element: 'NULL'
+                        }
+                    },
+                    {
                         table: 'ua_table_licensing_config'
                         id: 'd26ae97b42bb4eaabb3d100378a3a220'
                         key: {
@@ -1656,6 +1953,15 @@ declare global {
                         id: 'd3823c717a584c489e7a6bcfc7dd145c'
                         key: {
                             name: 'x_tekvo_famtriv_response'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'd3ec3fd1804c46289fa67b1716ad910e'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                            element: 'user'
+                            language: 'en'
                         }
                     },
                     {
@@ -1808,6 +2114,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: 'e1a94321de784f7bb33d4cb5bffc1413'
+                        key: {
+                            name: 'x_tekvo_famtriv_group_member'
+                            element: 'user'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: 'e1af72b7188542fa8b3557a167999f93'
                         key: {
@@ -1835,10 +2149,35 @@ declare global {
                     },
                     {
                         table: 'sys_dictionary'
+                        id: 'e315eb95a90c41fd8b7252fe5657d083'
+                        key: {
+                            name: 'x_tekvo_famtriv_player_category_stats'
+                            element: 'group'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: 'e4edcc3fcc724bee98e6f7d3e0b251a2'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
+                            element: 'active'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
                         id: 'e7e212e1e8a44f528095a3828dd0ba7f'
                         key: {
                             name: 'x_tekvo_famtriv_response'
                             element: 'player'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'e93966d9f94242f0a5c6c6c0045e6f09'
+                        key: {
+                            name: 'x_tekvo_famtriv_registration_log'
+                            element: 'NULL'
+                            language: 'en'
                         }
                     },
                     {
@@ -1973,6 +2312,13 @@ declare global {
                         id: 'fc7a4143c5784607915e6f561a7f89f4'
                         key: {
                             name: 'x_tekvo_famtriv_game'
+                        }
+                    },
+                    {
+                        table: 'sys_db_object'
+                        id: 'fc9e1687cba647059795d533822d4bcb'
+                        key: {
+                            name: 'x_tekvo_famtriv_group'
                         }
                     },
                     {

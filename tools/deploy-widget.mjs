@@ -4,10 +4,14 @@ import { APP_ID, ensure } from './snc.mjs';
 const dir = process.argv[2];
 const meta = JSON.parse(readFileSync(join(dir, 'widget.json'), 'utf8'));
 const read = f => existsSync(join(dir, f)) ? readFileSync(join(dir, f), 'utf8') : '';
+// Optional "public": true in widget.json marks sp_widget.public=true
+// (accessible without authorization). Default/absent -> 'false', matching
+// every existing widget.json (backward compatible).
+const isPublic = meta.public === true;
 await ensure('sp_widget', 'id=' + meta.id, {
   id: meta.id, name: meta.name, sys_scope: APP_ID,
   template: read('template.html'), css: read('css.scss'),
   client_script: read('client.js'), script: read('server.js'),
-  public: 'false',
+  public: isPublic ? 'true' : 'false',
 });
-console.log('deployed widget: ' + meta.id);
+console.log('deployed widget: ' + meta.id + (isPublic ? ' (public)' : ''));
