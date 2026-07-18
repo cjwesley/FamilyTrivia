@@ -62,3 +62,19 @@ export const TriviaSkill = ScriptInclude({
     description: 'Adaptive difficulty: targetDifficulty(userId, categoryId) and recordAnswer(userId, categoryId, correct).',
     accessibleFrom: 'package_private',
 })
+
+export const TriviaSelectorTest = ScriptInclude({
+    $id: Now.ID['trivia_selector_test_si'],
+    name: 'TriviaSelectorTest',
+    script: Now.include('../server/TriviaSelectorTest.server.js'),
+    description: 'Tests for TriviaSelector question/category picking.',
+    accessibleFrom: 'package_private',
+})
+
+export const TriviaSelector = ScriptInclude({
+    $id: Now.ID['trivia_selector_si'],
+    name: 'TriviaSelector',
+    script: Now.include('../server/TriviaSelector.server.js'),
+    description: 'Question and category selection: roundCategories, pickUniform, pickForUser (per-user difficulty targeting with shrinking exclusion window).',
+    accessibleFrom: 'package_private',
+})
