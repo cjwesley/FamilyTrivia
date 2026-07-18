@@ -30,7 +30,7 @@ body, .body-content { background: linear-gradient(160deg, var(--ft-bg), var(--ft
 .ft-avatar { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: #fff2;
   display: inline-flex; align-items: center; justify-content: center; }
 .ft-avatar svg, .ft-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.ft-champ .ft-avatar { box-shadow: 0 0 0 3px gold; position: relative; }
+.ft-champ .ft-avatar, .ft-avatar.ft-champ { box-shadow: 0 0 0 3px gold; position: relative; }
 .ft-crown { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 16px; }
 .ft-row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; }
 .ft-grow { flex: 1; }
