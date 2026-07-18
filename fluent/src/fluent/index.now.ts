@@ -2,3 +2,4 @@
 // later tasks (see .superpowers/sdd plan) following the idioms in
 // EmailOS/fluent/src/fluent/*.now.ts.
 export * from './roles.now'
+export * from './tables.now'
