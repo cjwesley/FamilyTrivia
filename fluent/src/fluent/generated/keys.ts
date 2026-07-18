@@ -14,6 +14,22 @@ declare global {
                         id: 'a689d4b97a57454d9491168eba2de5a6'
                     }
                 }
+                composite: [
+                    {
+                        table: 'sys_user_role'
+                        id: 'b1ab0bc2eefb4f8ab68ecf10f956f556'
+                        key: {
+                            name: 'x_tekvo_famtriv.admin'
+                        }
+                    },
+                    {
+                        table: 'sys_user_role'
+                        id: 'f36d8f7729de40cc8a07ddb15cc24865'
+                        key: {
+                            name: 'x_tekvo_famtriv.player'
+                        }
+                    },
+                ]
             }
         }
     }
