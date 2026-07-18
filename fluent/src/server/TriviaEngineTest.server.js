@@ -153,5 +153,45 @@ TriviaEngineTest.prototype = Object.extendsObject(TriviaTestBase, {
       this.assert(stA.question.gqId !== stB.question.gqId, 'per-player question rows');
     } finally { this._cleanup(seed.catId); }
   },
+  testSpectatorCannotAnswerAndQrJoins: function() {
+    var seed = this._seed('S');
+    var host = this._ensureTestUser('engHost'), spectator = this._ensureTestUser('engSpectator');
+    try {
+      var eng = new TriviaEngine();
+      var s = this._scope();
+      // host-only 1-question game, started with just the host as a player
+      var made = eng.createGame(host, { mode: 'uniform', categories: [seed.catId], questionCount: 1, secondsPerQuestion: 20 });
+      eng.startGame(made.gameId, host);
+      var st = eng.getState(made.gameId, host);
+      this.assertEqual(st.state, 'in_question', 'game started with host only');
+      // a QR/deep-link viewer who never joined tries to answer
+      var correctOpt = this._correctOptionFor(made.gameId, 1, host);
+      var res = eng.answer(made.gameId, spectator, correctOpt, 1000);
+      this.assertEqual(res.accepted, false, 'spectator answer rejected');
+      st = eng.getState(made.gameId, host);
+      this.assertEqual(st.state, 'in_question', 'round did not close early from ghost response');
+      var respCheck = new GlideRecord(s + '_response');
+      respCheck.addQuery('game', made.gameId); respCheck.addQuery('player', spectator); respCheck.query();
+      this.assert(!respCheck.next(), 'no response row written for spectator');
+
+      // ensureJoined: a second game still sitting in the lobby
+      var made2 = eng.createGame(host, { mode: 'uniform', categories: [seed.catId], questionCount: 1, secondsPerQuestion: 20 });
+      eng.ensureJoined(made2.gameId, spectator);
+      var gp = new GlideRecord(s + '_game_player');
+      gp.addQuery('game', made2.gameId); gp.addQuery('user', spectator); gp.query();
+      this.assert(gp.next(), 'ensureJoined added the spectator to the lobby game');
+      eng.ensureJoined(made2.gameId, spectator); // idempotent
+      var gpCount = new GlideAggregate(s + '_game_player');
+      gpCount.addQuery('game', made2.gameId); gpCount.addQuery('user', spectator);
+      gpCount.addAggregate('COUNT'); gpCount.query(); gpCount.next();
+      this.assertEqual(parseInt(gpCount.getAggregate('COUNT'), 10), 1, 'ensureJoined is idempotent - exactly one row');
+
+      // ensureJoined must NOT join a game that already started
+      eng.ensureJoined(made.gameId, spectator);
+      var gp3 = new GlideRecord(s + '_game_player');
+      gp3.addQuery('game', made.gameId); gp3.addQuery('user', spectator); gp3.query();
+      this.assert(!gp3.next(), 'ensureJoined does not join a game past the lobby state');
+    } finally { this._cleanup(seed.catId); }
+  },
   type: 'TriviaEngineTest'
 });

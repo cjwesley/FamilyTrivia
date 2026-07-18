@@ -10,6 +10,9 @@
     else if (input.action === 'advance') data.result = eng.advance(gameId, me);
     else if (input.action === 'tick') eng.tick(gameId);
   }
+  // QR/deep-link viewers land here without ever calling joinGame — auto-join
+  // them while the game is still in the lobby (no-op once play has started).
+  eng.ensureJoined(gameId, me);
   data.state = eng.getState(gameId, me);
   if (!data.state.error) {
     var ids = [];

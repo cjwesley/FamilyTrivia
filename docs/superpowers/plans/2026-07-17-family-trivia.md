@@ -1073,7 +1073,8 @@ git commit -m "feat: TriviaSelector with per-user difficulty targeting and shrin
   - `createGame(userId, opts)` — opts `{mode, categories: [], questionCount, secondsPerQuestion}`; returns `{gameId, code}`.
   - `joinGame(userId, code)` — returns `{gameId}` or `{error}` (no such code / not in lobby).
   - `startGame(gameId, userId)` — host only; selects questions, writes game_question rows, state→`in_question`, round 1.
-  - `answer(gameId, userId, optionId, clientMs)` — validates, first-write-wins, scores, updates game_player + skill; closes the round early when all players have answered; returns `{accepted, correct, points}`.
+  - `answer(gameId, userId, optionId, clientMs)` — validates the caller is a `game_player` on this game (else `{accepted:false, reason:'not a player in this game'}`), first-write-wins, scores, updates game_player + skill; closes the round early when all players have answered; returns `{accepted, correct, points}`.
+  - `ensureJoined(gameId, userId)` — public, idempotent; no-ops unless the game exists and is still `lobby`, else calls `_join`. Lets QR/deep-link viewers become players instead of silent spectators.
   - `tick(gameId)` — idempotent clock: closes an expired question (grace 2s) → `reveal`; advances an expired reveal (8s) → next round or finish.
   - `advance(gameId, userId)` — host-triggered next.
   - `finish(gameId)` — places, winner (score desc, then correct_count desc, then answer_time_total_ms asc), state→`finished`, calls `TriviaStats.rollupGame(gameId)` if defined.
@@ -1328,6 +1329,16 @@ TriviaEngine.prototype = {
     return { gameId: gameId };
   },
 
+  // Public, idempotent, self-guarding: only joins while the game is still in
+  // the lobby. Used by the game widget so QR/deep-link viewers become players
+  // instead of silent spectators. No-op for missing games or games already
+  // under way (in_question/reveal/finished).
+  ensureJoined: function(gameId, userId) {
+    var g = this._game(gameId);
+    if (!g || g.getValue('state') !== 'lobby') return;
+    this._join(gameId, userId);
+  },
+
   startGame: function(gameId, userId) {
     var g = this._game(gameId);
     if (!g || g.getValue('state') !== 'lobby') return { error: 'Not in lobby' };
@@ -1399,6 +1410,9 @@ TriviaEngine.prototype = {
   answer: function(gameId, userId, optionId, clientMs) {
     var g = this._game(gameId);
     if (!g || g.getValue('state') !== 'in_question') return { accepted: false, reason: 'round closed' };
+    var membership = new GlideRecord(this.scope + '_game_player');
+    membership.addQuery('game', gameId); membership.addQuery('user', userId); membership.query();
+    if (!membership.next()) return { accepted: false, reason: 'not a player in this game' };
     var round = parseInt(g.getValue('current_round'), 10);
     // first write wins
     var dup = new GlideRecord(this.scope + '_response');
@@ -2749,6 +2763,9 @@ git commit -m "feat: home widget with new-game picker, join-by-code, champion ba
     else if (input.action === 'advance') data.result = eng.advance(gameId, me);
     else if (input.action === 'tick') eng.tick(gameId);
   }
+  // QR/deep-link viewers land here without ever calling joinGame — auto-join
+  // them while the game is still in the lobby (no-op once play has started).
+  eng.ensureJoined(gameId, me);
   data.state = eng.getState(gameId, me);
   if (!data.state.error) {
     var ids = [];

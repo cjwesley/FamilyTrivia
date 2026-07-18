@@ -79,6 +79,16 @@ TriviaEngine.prototype = {
     return { gameId: gameId };
   },
 
+  // Public, idempotent, self-guarding: only joins while the game is still in
+  // the lobby. Used by the game widget so QR/deep-link viewers become players
+  // instead of silent spectators. No-op for missing games or games already
+  // under way (in_question/reveal/finished).
+  ensureJoined: function(gameId, userId) {
+    var g = this._game(gameId);
+    if (!g || g.getValue('state') !== 'lobby') return;
+    this._join(gameId, userId);
+  },
+
   startGame: function(gameId, userId) {
     var g = this._game(gameId);
     if (!g || g.getValue('state') !== 'lobby') return { error: 'Not in lobby' };
@@ -150,6 +160,9 @@ TriviaEngine.prototype = {
   answer: function(gameId, userId, optionId, clientMs) {
     var g = this._game(gameId);
     if (!g || g.getValue('state') !== 'in_question') return { accepted: false, reason: 'round closed' };
+    var membership = new GlideRecord(this.scope + '_game_player');
+    membership.addQuery('game', gameId); membership.addQuery('user', userId); membership.query();
+    if (!membership.next()) return { accepted: false, reason: 'not a player in this game' };
     var round = parseInt(g.getValue('current_round'), 10);
     // first write wins
     var dup = new GlideRecord(this.scope + '_response');
