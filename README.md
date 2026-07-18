@@ -176,13 +176,11 @@ Lobby share row → QR + "Copy invite link", both encoding `<instance>/trivia?id
   by widening them past 255 (they store text-typed, native UTF-8). Any FUTURE
   short string column that might carry emoji must be >255 too
   (regression-locked by `TriviaEngineTest.testCategoryIconRoundTrip`).
-- **QR codes** render via the external `api.qrserver.com` image API — which
-  means the game's **invite token travels to that third party** on every lobby
-  render. ACCEPTED RISK (final review, 2026-07-18): tokens are single-game,
-  lobby-only, expire ≤1h via the stale-game cleanup, and gate only rate-capped
-  player-role registration. Backlog: vendor a local JS QR generator into
-  ft-game to remove the egress entirely. If the QR image fails to load, the
-  copy-link button and 4-char code still work.
+- **QR codes render locally** (`src/widgets/ft-game/lib.js` — vendored
+  `qrcode@1.5.4`, MIT, bundled from npm source; drawn to a canvas on-device).
+  The invite token never leaves the player's phone. `deploy-widget.mjs`
+  prepends any widget's `lib.js` to its client script. If canvas rendering
+  ever fails, the copy-link button and 4-char code still work.
 - **`spUtil.recordWatch`** may or may not fire depending on instance
   AMB/plugin config; the game widget always falls back to a 3s poll too,
   so gameplay works either way — just less snappy on poll.

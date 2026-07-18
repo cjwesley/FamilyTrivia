@@ -7,7 +7,7 @@
       <div class="ft-dim">Join code</div>
       <div class="ft-code">{{c.st.code}}</div>
       <div ng-if="c.st.inviteToken">
-        <img ng-src="{{c.qrUrl()}}" style="border-radius:12px;margin-top:8px;" alt="QR to join"/>
+        <canvas id="ft-qr-canvas" style="border-radius:12px;margin-top:8px;background:#fff;padding:6px;" aria-label="QR code to join"></canvas>
         <button class="ft-btn ft-secondary" style="margin-top:8px;" ng-click="c.copyInvite()">
           {{c.copied ? '✅ Copied!' : '🔗 Copy invite link'}}
         </button>

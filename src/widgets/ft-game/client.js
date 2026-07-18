@@ -70,11 +70,24 @@ api.controller = function($scope, $interval, $timeout, $sce, spUtil) {
     return null;
   };
   c.inviteLink = function() {
-    return location.origin + '/trivia?id=ft_join&t=' + c.st.inviteToken;
+    return location.origin + '/trivia?id=ft_join&t=' + encodeURIComponent(c.st.inviteToken);
   };
-  c.qrUrl = function() {
-    return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(c.inviteLink());
-  };
+  // QR renders locally via the vendored qrcode lib (lib.js, MIT) - the invite
+  // token never leaves the device. Re-render only when the link changes.
+  var qrRenderedFor = '';
+  function renderQr() {
+    if (c.st.state !== 'lobby' || !c.st.inviteToken || typeof QRCodeLib === 'undefined') return;
+    var link = c.inviteLink();
+    if (link === qrRenderedFor) return;
+    $timeout(function() {
+      var canvas = document.getElementById('ft-qr-canvas');
+      if (!canvas) return;
+      QRCodeLib.toCanvas(canvas, link, { width: 180, margin: 1 }, function(err) {
+        if (!err) qrRenderedFor = link;
+      });
+    }, 0);
+  }
+  $scope.$watchGroup([function() { return c.st.state; }, function() { return c.st.inviteToken; }], renderQr);
   c.copied = false;
   c.showCopyFallback = false;
   c.copyInvite = function() {
