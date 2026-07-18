@@ -48,14 +48,14 @@ The share sheet in the lobby offers link + QR. The link is `/trivia?id=ft_join&t
 
 1. **Authenticated arrival:** token resolves to a lobby-state game → ensureJoined (game + group) → straight into the lobby.
 2. **Unauthenticated arrival:** a **public** portal page (no login) shows the game's existence only ("You're invited to a trivia game!") with two paths: *Log in* (standard instance login, then path 1) or *New here? Create your player account* — nickname, email, password, typed by the visitor directly to the instance.
-3. Registration endpoint (public Scripted REST): validates token ↔ game in `lobby` state → creates `sys_user` (email as user_name, marked `u_created_via=trivia_invite`), grants exactly the `x_tekvo_famtriv.player` role, creates the Profile with the chosen nickname, establishes the session, then path 1.
+3. Registration endpoint (public Scripted REST): validates token ↔ game in `lobby` state → creates `sys_user` (email as user_name), grants exactly the `x_tekvo_famtriv.player` role, creates the Profile with the chosen nickname, and writes a `registration_log` row (user, game, ip) — the audit index for self-created accounts. The new account then authenticates through the standard instance login (`/login.do?sysparm_goto_url=<invite link>`), which returns them to the join page for path 1 — no auto-login code exists.
 
 ### Security invariants (additions to the existing set)
 
 - Registration is impossible without a currently-valid invite token; tokens are single-game, unguessable (40 chars), and expire with the lobby (the existing hourly stale-game cleanup is the expiry mechanism).
 - The public endpoint rate-limits registrations (per IP and a global per-hour cap) and grants exactly the player role — never more, never configurable.
 - The public page and endpoint leak nothing about the game beyond its existence (no player list, no group name pre-auth).
-- Self-created accounts are auditable and bulk-disableable via the `u_created_via` marker.
+- Self-created accounts are auditable and bulk-disableable via their `registration_log` rows (a scoped table; adding marker columns to `sys_user` cross-scope is not possible and not attempted).
 - Passwords flow only between the visitor's device and the instance — never through app code paths that log or store them.
 - **Priority bump:** the pending session-auth ACL verification must pass before the first outside registration is enabled (correct-answer leakage matters more with strangers).
 
