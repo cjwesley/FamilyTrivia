@@ -78,3 +78,19 @@ export const TriviaSelector = ScriptInclude({
     description: 'Question and category selection: roundCategories, pickUniform, pickForUser (per-user difficulty targeting with shrinking exclusion window).',
     accessibleFrom: 'package_private',
 })
+
+export const TriviaEngineTest = ScriptInclude({
+    $id: Now.ID['trivia_engine_test_si'],
+    name: 'TriviaEngineTest',
+    script: Now.include('../server/TriviaEngineTest.server.js'),
+    description: 'Tests for TriviaEngine game lifecycle.',
+    accessibleFrom: 'package_private',
+})
+
+export const TriviaEngine = ScriptInclude({
+    $id: Now.ID['trivia_engine_si'],
+    name: 'TriviaEngine',
+    script: Now.include('../server/TriviaEngine.server.js'),
+    description: 'Game-lifecycle engine: create/join/start/answer/tick/advance/finish/getState/champion.',
+    accessibleFrom: 'package_private',
+})
