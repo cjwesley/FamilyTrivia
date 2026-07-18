@@ -128,7 +128,7 @@ TriviaRegistrationTest.prototype = Object.extendsObject(TriviaTestBase, {
     // '@famtriv-test.example' domain must stay well under that cap.
     var mixedCaseEmail = 'Hap' + gs.generateGUID().substring(0, 6) + '@FamTriv-Test.example';
     var normEmail = mixedCaseEmail.toLowerCase();
-    var password = 'Fam-Test-Pw-9f2c!'; // literal throwaway string; only ever checked for presence below, never echoed
+    var password = 'Fam-Test-Pw-9f2c!'; // literal throwaway string; only checked for hash presence + not-plaintext below, never echoed
     var ip = '203.0.113.10';
     try {
       var reg = new TriviaRegistration();
@@ -143,6 +143,9 @@ TriviaRegistrationTest.prototype = Object.extendsObject(TriviaTestBase, {
       this.assertEqual(u.getValue('first_name'), 'Happy Camper', 'sys_user first_name is the nickname');
       this.assert(u.getValue('active') == 'true' || u.getValue('active') === true || u.getValue('active') === '1', 'sys_user is active');
       this.assert(!!u.getValue('user_password'), 'login-capable account was created (password hash present)');
+      // assert() not assertEqual(): a failure message must never echo either
+      // the stored value or the throwaway literal.
+      this.assert(u.getValue('user_password') !== password, 'stored password is not plaintext');
       var userId = u.getUniqueValue();
 
       var roleRec = new GlideRecord('sys_user_has_role');

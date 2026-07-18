@@ -80,11 +80,19 @@ TriviaRegistration.prototype = {
   //   2. validate(token) -> invalid / not_lobby
   //   3. cap check (registration_log counts) -> rate_limited
   //   4. duplicate check (sys_user user_name/email) -> duplicate_email
-  //   5. role lookup by name -- throws if missing, before any insert
-  //   6. insert sys_user (setDisplayValue for the password, exactly once)
-  //   7. insert sys_user_has_role (exactly one row)
+  //   5. role lookup by name -- missing role: gs.error + opaque
+  //      {ok:false, reason:'error'} return, before any insert
+  //   6. insert sys_user (setDisplayValue for the password, exactly once);
+  //      falsy insert() -> gs.error + reason 'error' (nothing was created)
+  //   7. insert sys_user_has_role (exactly one row); falsy insert() ->
+  //      deactivate the just-created user, gs.error + reason 'error'
   //   8. create Profile (nickname)
-  //   9. insert registration_log row
+  //   9. insert registration_log row; falsy insert() -> gs.warn only
+  //      (account is valid, auditing degraded -- not user-facing)
+  //
+  // The 'error' reason is internal/opaque: it carries no detail to callers;
+  // specifics go to gs.error/gs.warn server-side only. This class never
+  // throws to its caller.
   register: function(token, nickname, email, password, ip) {
     if (!token || !String(token).trim() ||
         !nickname || !String(nickname).trim() ||
@@ -111,9 +119,11 @@ TriviaRegistration.prototype = {
     roleRec.addQuery('name', 'x_tekvo_famtriv.player');
     roleRec.query();
     if (!roleRec.next()) {
-      // Config invariant, not a user-input case covered by the reason enum:
-      // fail loudly, and only after zero inserts have happened.
-      throw new Error('TriviaRegistration.register: role x_tekvo_famtriv.player not found; aborting before any user was created');
+      // Config invariant, not a user-input case: log server-side, return the
+      // opaque internal 'error' reason. A public caller must never receive
+      // an exception or any detail; zero inserts have happened at this point.
+      gs.error('TriviaRegistration: player role not found');
+      return { ok: false, reason: 'error' };
     }
     var roleId = roleRec.getUniqueValue();
 
@@ -125,12 +135,25 @@ TriviaRegistration.prototype = {
     u.setValue('active', true);
     u.user_password.setDisplayValue(password);
     var userId = u.insert();
+    if (!userId) {
+      // Insert refused (ACL/business-rule change): nothing was created,
+      // report the opaque internal 'error' reason.
+      gs.error('TriviaRegistration: sys_user insert failed');
+      return { ok: false, reason: 'error' };
+    }
 
     var hasRole = new GlideRecord('sys_user_has_role');
     hasRole.initialize();
     hasRole.setValue('user', userId);
     hasRole.setValue('role', roleId);
-    hasRole.insert();
+    if (!hasRole.insert()) {
+      // Never leave a role-less account login-capable: deactivate the user
+      // we just created (delete is not available cross-scope) and fail.
+      gs.error('TriviaRegistration: role grant insert failed; deactivating user ' + userId);
+      u.setValue('active', false);
+      u.update();
+      return { ok: false, reason: 'error' };
+    }
 
     new TriviaProfile().getOrCreate(userId);
 
@@ -139,7 +162,11 @@ TriviaRegistration.prototype = {
     log.setValue('user', userId);
     log.setValue('game', gameId);
     log.setValue('ip', ip || '');
-    log.insert();
+    if (!log.insert()) {
+      // Account and role are valid; only rate-limit auditing is degraded.
+      // Not a user-facing failure.
+      gs.warn('TriviaRegistration: registration_log insert failed for user ' + userId + ', game ' + gameId);
+    }
 
     return { ok: true, userName: normEmail };
   },
