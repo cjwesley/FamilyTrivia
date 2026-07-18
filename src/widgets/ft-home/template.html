@@ -6,17 +6,28 @@
     <a href="?id=ft_profile" class="ft-dim">Edit</a>
   </div>
   <div class="ft-title">Family Trivia</div>
+
+  <div class="ft-tabs" ng-if="c.data.groups.length > 1">
+    <button class="ft-tab" ng-repeat="g in c.data.groups"
+            ng-class="{'ft-on': c.activeGroup === g.id}"
+            ng-click="c.switchGroup(g.id)">{{g.name}}</button>
+  </div>
+
   <div class="ft-card ft-row" ng-if="c.data.champion">
     <div class="ft-avatar ft-pop" style="box-shadow:0 0 0 3px gold;"
          ng-bind-html="c.trust(c.data.champion.avatarHtml)"></div>
     <div class="ft-grow">
-      <div style="color:gold;font-weight:700;">🏆 Reigning Champion</div>
+      <div style="color:gold;font-weight:700;">🏆 Reigning Champion<span ng-if="c.activeGroupName()"> · {{c.activeGroupName()}}</span></div>
       <div>{{c.data.champion.nickname}}</div>
     </div>
   </div>
 
   <div ng-if="c.view === 'home'">
-    <button class="ft-btn" ng-click="c.view = 'new'">🎮 New Game</button>
+    <button class="ft-btn" ng-if="c.data.groups.length" ng-click="c.view = 'new'">🎮 New Game</button>
+    <div class="ft-card" ng-if="!c.data.groups.length" style="text-align:center;">
+      <div style="font-size:32px;">🚪</div>
+      <div class="ft-dim" style="margin-top:6px;">Ask the game admin to add you to a group or join a game via an invite link.</div>
+    </div>
     <button class="ft-btn ft-secondary" ng-click="c.view = 'join'">🔑 Join Game</button>
     <button class="ft-btn ft-secondary" onclick="window.location='?id=ft_practice'">🧠 Practice</button>
     <button class="ft-btn ft-secondary" onclick="window.location='?id=ft_leaderboard'">🥇 Leaderboard</button>

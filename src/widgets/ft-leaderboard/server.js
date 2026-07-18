@@ -1,5 +1,13 @@
 (function() {
-  var stats = new TriviaStats().leaderboard();
+  var me = gs.getUserID();
+  var groups = new TriviaGroups();
+  data.groups = groups.userGroups(me);
+  var groupId = input && input.groupId;
+  if (!groupId || !groups.isMember(me, groupId))
+    groupId = data.groups.length ? data.groups[0].id : '';
+  data.groupId = groupId;
+
+  var stats = new TriviaStats().leaderboard(groupId);
   data.rows = stats.rows;
   data.byCategory = stats.byCategory;
   var ids = [];
@@ -9,7 +17,7 @@
       if (ids.indexOf(stats.byCategory[cat][j].userId) === -1) ids.push(stats.byCategory[cat][j].userId);
   var prof = new TriviaProfile();
   data.cards = prof.cards(ids);
-  var champId = new TriviaEngine().champion().userId;
+  var champId = groupId ? new TriviaEngine().champion(groupId).userId : '';
   data.champion = champId ? prof.card(champId) : null;
   data.categories = [];
   var c = new GlideRecord(gs.getCurrentScopeName() + '_category');

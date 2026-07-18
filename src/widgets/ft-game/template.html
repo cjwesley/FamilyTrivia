@@ -6,7 +6,15 @@
     <div class="ft-card" style="text-align:center;">
       <div class="ft-dim">Join code</div>
       <div class="ft-code">{{c.st.code}}</div>
-      <img ng-src="{{c.qrUrl()}}" style="border-radius:12px;margin-top:8px;" alt="QR to join"/>
+      <div ng-if="c.st.inviteToken">
+        <img ng-src="{{c.qrUrl()}}" style="border-radius:12px;margin-top:8px;" alt="QR to join"/>
+        <button class="ft-btn ft-secondary" style="margin-top:8px;" ng-click="c.copyInvite()">
+          {{c.copied ? '✅ Copied!' : '🔗 Copy invite link'}}
+        </button>
+        <input ng-if="c.showCopyFallback" class="form-control" readonly
+               ng-value="c.inviteLink()" onclick="this.select()"
+               style="margin-top:8px;text-align:center;" />
+      </div>
       <div class="ft-dim" style="margin-top:6px;">{{c.st.mode === 'adaptive' ? 'Skill-Matched' : 'Everyone Same'}} · {{c.st.totalRounds}} questions</div>
     </div>
     <div class="ft-card">
