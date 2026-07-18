@@ -9,8 +9,8 @@ TriviaTestRunner.prototype = {
       new TriviaSelectorTest(),
       new TriviaEngineTest(),
       new TriviaStatsTest(),
-      new TriviaPracticeTest()
-      // Task 19 adds: , new TriviaE2ETest()
+      new TriviaPracticeTest(),
+      new TriviaE2ETest()
     ];
   },
   runAll: function() {

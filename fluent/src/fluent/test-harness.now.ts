@@ -134,3 +134,11 @@ export const TriviaProfile = ScriptInclude({
     description: 'Player profile rendering used by all widgets: getOrCreate/card/cards/save (nickname + avatar source: gallery/upload/sn_photo).',
     accessibleFrom: 'package_private',
 })
+
+export const TriviaE2ETest = ScriptInclude({
+    $id: Now.ID['trivia_e2e_test_si'],
+    name: 'TriviaE2ETest',
+    script: Now.include('../server/TriviaE2ETest.server.js'),
+    description: 'Full-stack smoke test: adaptive game lifecycle (create/join/start/answer/finish), champion/stats/skill-rating invariants, and practice-isolation.',
+    accessibleFrom: 'package_private',
+})

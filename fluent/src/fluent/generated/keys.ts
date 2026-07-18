@@ -13,6 +13,10 @@ declare global {
                         table: 'sys_module'
                         id: 'a689d4b97a57454d9491168eba2de5a6'
                     }
+                    src_server_TriviaE2ETest_server_js: {
+                        table: 'sys_module'
+                        id: '20372f3c53f04099849880fe6cd43767'
+                    }
                     src_server_TriviaEngine_server_js: {
                         table: 'sys_module'
                         id: 'ed3caa1649264853a3580129043da8fa'
@@ -76,6 +80,10 @@ declare global {
                     src_server_TriviaTestRunner_server_js: {
                         table: 'sys_module'
                         id: 'ddc2accd99fe40549e05cff784fcfb4f'
+                    }
+                    trivia_e2e_test_si: {
+                        table: 'sys_script_include'
+                        id: 'bb7b7801b86a47628cdfac061dc38367'
                     }
                     trivia_engine_si: {
                         table: 'sys_script_include'
