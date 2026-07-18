@@ -41,9 +41,19 @@ TriviaE2ETest.prototype = Object.extendsObject(TriviaTestBase, {
       pop.setValue('text', 'POpt' + po); pop.setValue('correct', po === 0); pop.setValue('order', po);
       pop.insert();
     }
-    return { catId: catId };
+    // group: createGame now gates on membership before it inserts anything,
+    // so the owner (the game host below) is pre-granted membership here.
+    var ownerId = this._ensureTestUser(tag + 'GrpOwn');
+    var grp = new GlideRecord(s + '_group');
+    grp.initialize();
+    grp.setValue('name', 'ZZ E2EGrp ' + tag);
+    grp.setValue('owner', ownerId);
+    grp.setValue('active', true);
+    var groupId = grp.insert();
+    new TriviaGroups().ensureMember(ownerId, groupId);
+    return { catId: catId, groupId: groupId, ownerId: ownerId };
   },
-  _cleanup: function(catId) {
+  _cleanup: function(catId, groupId) {
     var s = this._scope();
     var del = function(table, field, value) {
       var gr = new GlideRecord(s + '_' + table);
@@ -69,6 +79,11 @@ TriviaE2ETest.prototype = Object.extendsObject(TriviaTestBase, {
     while (g.next()) {
       del('game_player', 'game', g.getUniqueValue());
       g.deleteRecord();
+    }
+    if (groupId) {
+      del('group_member', 'group', groupId);
+      var grp = new GlideRecord(s + '_group');
+      if (grp.get(groupId)) grp.deleteRecord();
     }
   },
   _correctOptionFor: function(gameId, round, userId) {
@@ -140,12 +155,12 @@ TriviaE2ETest.prototype = Object.extendsObject(TriviaTestBase, {
   // stats snapshots, so splitting them would require re-deriving state.
   testAdaptiveGameLifecycleAndPracticeIsolation: function() {
     var seed = this._seed('X');
-    var a = this._ensureTestUser('e2eA'), b = this._ensureTestUser('e2eB');
+    var a = seed.ownerId, b = this._ensureTestUser('e2eB');
     try {
       var winsBeforeA = this._statsFor(a).wins;
 
       var eng = new TriviaEngine();
-      var made = eng.createGame(a, { mode: 'adaptive', categories: [seed.catId], questionCount: 3, secondsPerQuestion: 20 });
+      var made = eng.createGame(a, { mode: 'adaptive', categories: [seed.catId], questionCount: 3, secondsPerQuestion: 20, groupId: seed.groupId });
       this.assertEqual(made.code.length, 4, '4-char join code');
       var joined = eng.joinGame(b, made.code);
       this.assertEqual(joined.gameId, made.gameId, 'B joins by code');
@@ -182,7 +197,7 @@ TriviaE2ETest.prototype = Object.extendsObject(TriviaTestBase, {
       this.assertEqual(st.state, 'finished', 'game finished');
       this.assertEqual(st.winner, a, 'A is the winner');
       this.assertEqual(st.podium[0].userId, a, 'A tops the podium');
-      this.assertEqual(eng.champion().userId, a, 'champion() returns A');
+      this.assertEqual(eng.champion(seed.groupId).userId, a, 'champion() returns A');
 
       var statsAfterA = this._statsFor(a);
       this.assertEqual(statsAfterA.wins, winsBeforeA + 1, "A's total_wins incremented by exactly 1 vs. before-snapshot");
@@ -210,7 +225,7 @@ TriviaE2ETest.prototype = Object.extendsObject(TriviaTestBase, {
       this.assertEqual(statsAfterPractice.cur, statsBeforePractice.cur, 'practice does not change current_win_streak');
       this.assertEqual(statsAfterPractice.longest, statsBeforePractice.longest, 'practice does not change longest_win_streak');
     } finally {
-      this._cleanup(seed.catId);
+      this._cleanup(seed.catId, seed.groupId);
     }
   },
   type: 'TriviaE2ETest'

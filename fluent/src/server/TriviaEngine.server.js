@@ -30,11 +30,14 @@ TriviaEngine.prototype = {
   },
 
   createGame: function(userId, opts) {
+    if (!new TriviaGroups().isMember(userId, opts.groupId)) return { error: 'Not a member of that group' };
     var code = this._newCode();
     var g = new GlideRecord(this.scope + '_game');
     g.initialize();
     g.setValue('code', code);
     g.setValue('host', userId);
+    g.setValue('group', opts.groupId);
+    g.setValue('invite_token', new TriviaGroups().newToken());
     g.setValue('mode', opts.mode === 'adaptive' ? 'adaptive' : 'uniform');
     g.setValue('categories', (opts.categories || []).join(','));
     g.setValue('question_count', opts.questionCount || 10);
@@ -62,7 +65,11 @@ TriviaEngine.prototype = {
   _join: function(gameId, userId) {
     var p = new GlideRecord(this.scope + '_game_player');
     p.addQuery('game', gameId); p.addQuery('user', userId); p.query();
-    if (p.next()) return p.getUniqueValue();
+    var existingId = p.next() ? p.getUniqueValue() : null;
+    // every join path (create/joinGame/ensureJoined) auto-grants group membership
+    var g = this._game(gameId);
+    if (g && g.getValue('group')) new TriviaGroups().ensureMember(userId, g.getValue('group'));
+    if (existingId) return existingId;
     p.initialize(); p.setValue('game', gameId); p.setValue('user', userId);
     p.setValue('score', 0); p.setValue('correct_count', 0); p.setValue('answer_time_total_ms', 0);
     return p.insert();
@@ -266,19 +273,37 @@ TriviaEngine.prototype = {
     if (typeof TriviaStats !== 'undefined') new TriviaStats().rollupGame(gameId);
   },
 
-  champion: function() {
+  champion: function(groupId) {
     var g = new GlideRecord(this.scope + '_game');
     g.addQuery('state', 'finished');
     g.addNotNullQuery('winner');
+    if (groupId) g.addQuery('group', groupId);
     g.orderByDesc('sys_updated_on');
     g.setLimit(1); g.query();
     return { userId: g.next() ? g.getValue('winner') : '' };
+  },
+
+  // resolves a lobby/game invite token to {gameId, state}; never returns
+  // player data. Exact match, non-empty token only.
+  resolveInvite: function(token) {
+    if (!token) return { error: 'invalid' };
+    var g = new GlideRecord(this.scope + '_game');
+    g.addQuery('invite_token', token);
+    g.query();
+    if (!g.next()) return { error: 'invalid' };
+    return { gameId: g.getUniqueValue(), state: g.getValue('state') };
   },
 
   getState: function(gameId, userId) {
     var g = this._game(gameId);
     if (!g) return { error: 'no such game' };
     var state = g.getValue('state');
+    var groupId = g.getValue('group');
+    var groupName = '';
+    if (groupId) {
+      var grp = new GlideRecord(this.scope + '_group');
+      if (grp.get(groupId)) groupName = grp.getValue('name');
+    }
     var out = {
       gameId: gameId, state: state, code: g.getValue('code'),
       mode: g.getValue('mode'), host: g.getValue('host'), isHost: g.getValue('host') === userId,
@@ -287,8 +312,13 @@ TriviaEngine.prototype = {
       secondsPerQuestion: parseInt(g.getValue('seconds_per_question'), 10) || 20,
       serverNow: this._now(),
       players: this._players(gameId),
-      champion: this.champion().userId
+      group: groupId,
+      groupName: groupName,
+      champion: this.champion(groupId).userId
     };
+    if (state === 'lobby') {
+      out.inviteToken = g.getValue('invite_token');
+    }
     if (state === 'in_question') {
       out.endsAt = this._ms(g.getValue('question_started_at')) + out.secondsPerQuestion * 1000;
       var mine = this._gameQuestionFor(gameId, out.round, userId);
@@ -365,6 +395,7 @@ TriviaEngine.prototype = {
       prev.addQuery('state', 'finished');
       prev.addNotNullQuery('winner');
       prev.addQuery('sys_id', '!=', gameId);
+      if (groupId) prev.addQuery('group', groupId);
       prev.orderByDesc('sys_updated_on');
       prev.setLimit(1); prev.query();
       out.previousChampion = prev.next() ? prev.getValue('winner') : '';
