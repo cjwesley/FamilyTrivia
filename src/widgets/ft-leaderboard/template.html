@@ -1,0 +1,41 @@
+<div class="ft-app">
+  <div class="ft-title">Leaderboard</div>
+  <div class="ft-card ft-row" ng-if="c.data.champion">
+    <div class="ft-avatar" style="box-shadow:0 0 0 3px gold;"
+         ng-bind-html="c.trust(c.data.champion.avatarHtml)"></div>
+    <div class="ft-grow">
+      <div style="color:gold;font-weight:700;">🏆 Reigning Champion</div>
+      <div>{{c.data.champion.nickname}}</div>
+    </div>
+  </div>
+  <div class="ft-tabs">
+    <button class="ft-tab" ng-class="{'ft-on': c.tab === 'wins'}" ng-click="c.tab = 'wins'">Wins</button>
+    <button class="ft-tab" ng-class="{'ft-on': c.tab === 'points'}" ng-click="c.tab = 'points'">Points</button>
+    <button class="ft-tab" ng-class="{'ft-on': c.tab === 'correct'}" ng-click="c.tab = 'correct'">Correct</button>
+    <button class="ft-tab" ng-class="{'ft-on': c.tab === 'category'}" ng-click="c.tab = 'category'">By Category</button>
+    <button class="ft-tab" ng-class="{'ft-on': c.tab === 'streak'}" ng-click="c.tab = 'streak'">Best Streak</button>
+  </div>
+  <div class="ft-tabs" ng-if="c.tab === 'category'" style="flex-wrap:wrap;">
+    <button class="ft-tab" ng-repeat="cat in c.data.categories"
+            ng-class="{'ft-on': c.cat === cat.id}" ng-click="c.cat = cat.id">{{cat.icon}} {{cat.name}}</button>
+  </div>
+  <div class="ft-card" ng-if="c.tab !== 'category'">
+    <div class="ft-row" ng-repeat="row in c.ranked() track by row.userId">
+      <div class="ft-medal">{{c.medal($index)}}</div>
+      <div class="ft-avatar" ng-bind-html="c.trust(c.data.cards[row.userId].avatarHtml)"></div>
+      <div class="ft-grow">{{c.data.cards[row.userId].nickname}}</div>
+      <div style="font-weight:800;">{{c.value(row)}}</div>
+    </div>
+    <div class="ft-dim" ng-if="!c.data.rows.length" style="text-align:center;">No games played yet!</div>
+  </div>
+  <div class="ft-card" ng-if="c.tab === 'category'">
+    <div class="ft-row" ng-repeat="row in c.catRows() track by row.userId">
+      <div class="ft-medal">{{c.medal($index)}}</div>
+      <div class="ft-avatar" ng-bind-html="c.trust(c.data.cards[row.userId].avatarHtml)"></div>
+      <div class="ft-grow">{{c.data.cards[row.userId].nickname}}</div>
+      <div style="font-weight:800;">{{row.correct}}</div>
+    </div>
+    <div class="ft-dim" ng-if="!c.catRows().length" style="text-align:center;">No answers in this category yet.</div>
+  </div>
+  <a class="ft-btn ft-secondary" href="?id=ft_home" style="text-align:center;">← Home</a>
+</div>
