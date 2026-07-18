@@ -20,7 +20,7 @@ New tables (same scope, same conventions):
 
 | Table | Key fields | Notes |
 |---|---|---|
-| **Group** | name, owner (ref sys_user), invite_token (str 40, unique), active (bool) | **Admin-only creation** (platform UI is sufficient; no in-app creation UI) |
+| **Group** | name, owner (ref sys_user), active (bool) | **Admin-only creation** (platform UI is sufficient; no in-app creation UI) |
 | **Group Member** | group (ref), user (ref), joined_on | Unique (group, user) |
 
 Changed tables:
