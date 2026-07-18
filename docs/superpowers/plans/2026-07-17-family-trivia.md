@@ -3343,7 +3343,7 @@ const CATS = {
   18: ['Computers', '💻', '#00bbf9'],
 };
 const DIFF = { easy: 1, medium: 3, hard: 5 };
-const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, '').split('=')));
+const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v === undefined ? 'true' : v]; }));
 const pool = args.pool || 'game';
 const perCat = parseInt(args.amount || '50', 10);
 
