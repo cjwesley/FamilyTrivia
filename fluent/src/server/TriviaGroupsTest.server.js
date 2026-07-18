@@ -83,6 +83,26 @@ TriviaGroupsTest.prototype = Object.extendsObject(TriviaTestBase, {
       this._cleanupGroup(gid);
     }
   },
+  testDeactivatedAfterJoin: function() {
+    var u = this._ensureTestUser('grpDeact');
+    var gid = this._makeGroup('ZZ Grp D Deact', u, true);
+    try {
+      var groups = new TriviaGroups();
+      var mid = groups.ensureMember(u, gid);
+      this.assert(!!mid, 'membership row inserted while group was active');
+      this.assertEqual(this._memberCount(gid), 1, 'one group_member row after join');
+      var g = new GlideRecord(this._scope() + '_group');
+      g.get(gid); g.setValue('active', false); g.update();
+      var list = groups.userGroups(u);
+      var found = false;
+      for (var i = 0; i < list.length; i++) if (list[i].id === gid) found = true;
+      this.assert(!found, 'userGroups omits group deactivated after join');
+      this.assert(!groups.isMember(u, gid), 'isMember false for group deactivated after join');
+      this.assertEqual(this._memberCount(gid), 1, 'deactivation does not delete the membership row');
+    } finally {
+      this._cleanupGroup(gid);
+    }
+  },
   testNewTokenShape: function() {
     var groups = new TriviaGroups();
     var t1 = groups.newToken();
