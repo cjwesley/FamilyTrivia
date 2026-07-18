@@ -13,6 +13,30 @@ declare global {
                         table: 'sys_module'
                         id: 'a689d4b97a57454d9491168eba2de5a6'
                     }
+                    src_server_TriviaHarnessTest_server_js: {
+                        table: 'sys_module'
+                        id: 'e628c95cb9ab4a26a1d119bc753c4bc8'
+                    }
+                    src_server_TriviaTestBase_server_js: {
+                        table: 'sys_module'
+                        id: '2922fd082bff44db9ec184370ee0ac3c'
+                    }
+                    src_server_TriviaTestRunner_server_js: {
+                        table: 'sys_module'
+                        id: 'ddc2accd99fe40549e05cff784fcfb4f'
+                    }
+                    trivia_harness_test_si: {
+                        table: 'sys_script_include'
+                        id: '78266459e9514e41821867375a74307a'
+                    }
+                    trivia_test_base_si: {
+                        table: 'sys_script_include'
+                        id: '3efb3b3b41f249ba96ecf3cba736dd1c'
+                    }
+                    trivia_test_runner_si: {
+                        table: 'sys_script_include'
+                        id: '050f4d1456d04a7485e296df3f1d7b47'
+                    }
                 }
                 composite: [
                     {

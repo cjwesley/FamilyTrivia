@@ -3,3 +3,4 @@
 // EmailOS/fluent/src/fluent/*.now.ts.
 export * from './roles.now'
 export * from './tables.now'
+export * from './test-harness.now'
