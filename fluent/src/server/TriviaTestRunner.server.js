@@ -3,8 +3,8 @@ TriviaTestRunner.prototype = {
   initialize: function() {},
   suites: function() {
     return [
-      new TriviaHarnessTest()
-      // Task 5 adds: , new TriviaScoringTest()
+      new TriviaHarnessTest(),
+      new TriviaScoringTest()
       // Task 6 adds: , new TriviaSkillTest()
       // Task 7 adds: , new TriviaSelectorTest()
       // Task 8 adds: , new TriviaEngineTest()

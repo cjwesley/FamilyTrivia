@@ -30,3 +30,19 @@ export const TriviaTestRunner = ScriptInclude({
     description: 'Aggregates and runs every registered test suite.',
     accessibleFrom: 'package_private',
 })
+
+export const TriviaScoringTest = ScriptInclude({
+    $id: Now.ID['trivia_scoring_test_si'],
+    name: 'TriviaScoringTest',
+    script: Now.include('../server/TriviaScoringTest.server.js'),
+    description: 'Tests for TriviaScoring scoring formula.',
+    accessibleFrom: 'package_private',
+})
+
+export const TriviaScoring = ScriptInclude({
+    $id: Now.ID['trivia_scoring_si'],
+    name: 'TriviaScoring',
+    script: Now.include('../server/TriviaScoring.server.js'),
+    description: 'Scoring calculation: (500 + 500 * remaining/total) * (1 + 0.125 * (difficulty - 1)).',
+    accessibleFrom: 'package_private',
+})
