@@ -14,4 +14,5 @@ await ensure('sys_ws_operation', 'web_service_definition=' + wsdef.sys_id + '^na
 // it can differ from the full scope name (SCOPE). Read the real path back
 // instead of assuming it equals /api/<SCOPE>/ftest/run.
 const [op] = await list('sys_ws_operation', 'web_service_definition=' + wsdef.sys_id + '^name=run', 'operation_uri');
-console.log('test API at ' + (op ? op.operation_uri : '/api/<namespace>/ftest/run'));
+if (!op) throw new Error('Scripted REST operation "run" missing after ensure(); check sys_ws_operation on the instance.');
+console.log('test API at ' + op.operation_uri);
