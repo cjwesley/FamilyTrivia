@@ -126,3 +126,11 @@ export const TriviaPractice = ScriptInclude({
     description: 'Solo practice sessions: startSession/nextQuestion/answerQuestion/progress feeding TriviaSkill ratings.',
     accessibleFrom: 'package_private',
 })
+
+export const TriviaProfile = ScriptInclude({
+    $id: Now.ID['trivia_profile_si'],
+    name: 'TriviaProfile',
+    script: Now.include('../server/TriviaProfile.server.js'),
+    description: 'Player profile rendering used by all widgets: getOrCreate/card/cards/save (nickname + avatar source: gallery/upload/sn_photo).',
+    accessibleFrom: 'package_private',
+})

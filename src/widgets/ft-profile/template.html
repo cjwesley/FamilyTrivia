@@ -1,0 +1,35 @@
+<div class="ft-app">
+  <div class="ft-title">My Profile <span ng-if="c.data.champion">🏆</span></div>
+  <div class="ft-card" ng-if="c.data.champion" style="text-align:center; color: gold;">
+    👑 Reigning Champion 👑
+  </div>
+  <div class="ft-card" style="text-align:center;">
+    <div class="ft-avatar" style="width:96px;height:96px;margin:0 auto;" ng-bind-html="c.trust(c.data.card.avatarHtml)"></div>
+    <div style="margin-top:10px;font-weight:700;">{{c.data.card.nickname}}</div>
+  </div>
+  <div class="ft-card">
+    <label class="ft-dim">Nickname</label>
+    <input class="form-control" ng-model="c.nickname" maxlength="40"
+           style="border-radius:12px;font-size:18px;" />
+    <button class="ft-btn" style="margin-top:10px;" ng-click="c.save(c.data.profile.avatarSource, c.data.profile.avatarId)">Save name</button>
+  </div>
+  <div class="ft-card">
+    <div class="ft-dim" style="margin-bottom:8px;">Pick an avatar</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <div class="ft-avatar" ng-repeat="a in c.data.avatars" style="width:56px;height:56px;"
+           ng-class="{'ft-champ': c.data.profile.avatarId === a.id}"
+           ng-click="c.save('gallery', a.id)" ng-bind-html="c.trust(a.svg)"></div>
+    </div>
+  </div>
+  <div class="ft-card">
+    <label class="ft-btn ft-secondary" style="text-align:center;margin-bottom:8px;">
+      📷 Upload a photo
+      <input type="file" accept="image/*" style="display:none"
+             onchange="angular.element(this).scope().c.upload(this.files)" />
+    </label>
+    <button class="ft-btn ft-secondary" ng-if="c.data.hasSnPhoto" ng-click="c.save('sn_photo')">
+      Use my ServiceNow photo
+    </button>
+  </div>
+  <a class="ft-btn ft-secondary" href="?id=ft_home" style="text-align:center;">← Home</a>
+</div>

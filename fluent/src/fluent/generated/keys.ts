@@ -33,6 +33,10 @@ declare global {
                         table: 'sys_module'
                         id: 'e050645304f0447ab9c8937ba1cc71ac'
                     }
+                    src_server_TriviaProfile_server_js: {
+                        table: 'sys_module'
+                        id: '43e76e5cb569414caf978275ce83bb6b'
+                    }
                     src_server_TriviaScoring_server_js: {
                         table: 'sys_module'
                         id: '8fa79101a67745688ad8510a7d0694ab'
@@ -92,6 +96,10 @@ declare global {
                     trivia_practice_test_si: {
                         table: 'sys_script_include'
                         id: '05035e8f34e3423fae74230aea441403'
+                    }
+                    trivia_profile_si: {
+                        table: 'sys_script_include'
+                        id: 'd7a14bd5daea4b699076d8d1d909fbb3'
                     }
                     trivia_scoring_si: {
                         table: 'sys_script_include'
