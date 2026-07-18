@@ -25,7 +25,7 @@
 - TDD loop for server logic: add/edit the test Script Include source → `(cd fluent && npm run build && npm run deploy)` → `node tools/run-tests.mjs` (expect FAIL) → add implementation → build+deploy → run again (expect PASS) → commit. Commit after every green step.
 - **Approved deviation from spec:** server tests run through a custom in-instance runner (Task 4) instead of ATF — ATF can't be triggered and read cleanly over REST from the CLI, and the runner gives the tight TDD loop this plan depends on. Coverage is the same set the spec names (selection, scoring, rollups, ratings, multiplayer smoke).
 - Widget/UI tasks are verified by loading `/trivia` pages in a browser.
-- Scoped Scripted REST APIs are served at `/api/<SN_SCOPE>/<service_id>` (the namespace is the full scope name). Tooling builds this path from `.env`.
+- Scoped Scripted REST APIs are served under the VENDOR-PREFIX namespace (e.g. `/api/tekvo/ftest`), not the full scope — the instance calculates `sys_ws_definition.namespace` and ignores Table API overrides. Tooling must look up the real `operation_uri` from the instance (run-tests.mjs does this) rather than constructing the path.
 
 ## File Structure
 
