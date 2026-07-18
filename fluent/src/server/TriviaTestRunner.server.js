@@ -4,8 +4,8 @@ TriviaTestRunner.prototype = {
   suites: function() {
     return [
       new TriviaHarnessTest(),
-      new TriviaScoringTest()
-      // Task 6 adds: , new TriviaSkillTest()
+      new TriviaScoringTest(),
+      new TriviaSkillTest()
       // Task 7 adds: , new TriviaSelectorTest()
       // Task 8 adds: , new TriviaEngineTest()
       // Task 9 adds: , new TriviaStatsTest()

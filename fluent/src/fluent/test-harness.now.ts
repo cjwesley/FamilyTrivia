@@ -46,3 +46,19 @@ export const TriviaScoring = ScriptInclude({
     description: 'Scoring calculation: (500 + 500 * remaining/total) * (1 + 0.125 * (difficulty - 1)).',
     accessibleFrom: 'package_private',
 })
+
+export const TriviaSkillTest = ScriptInclude({
+    $id: Now.ID['trivia_skill_test_si'],
+    name: 'TriviaSkillTest',
+    script: Now.include('../server/TriviaSkillTest.server.js'),
+    description: 'Tests for TriviaSkill adaptive difficulty rating.',
+    accessibleFrom: 'package_private',
+})
+
+export const TriviaSkill = ScriptInclude({
+    $id: Now.ID['trivia_skill_si'],
+    name: 'TriviaSkill',
+    script: Now.include('../server/TriviaSkill.server.js'),
+    description: 'Adaptive difficulty: targetDifficulty(userId, categoryId) and recordAnswer(userId, categoryId, correct).',
+    accessibleFrom: 'package_private',
+})
