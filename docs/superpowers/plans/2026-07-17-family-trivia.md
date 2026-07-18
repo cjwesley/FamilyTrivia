@@ -2227,7 +2227,7 @@ body, .body-content { background: linear-gradient(160deg, var(--ft-bg), var(--ft
 .ft-avatar { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: #fff2;
   display: inline-flex; align-items: center; justify-content: center; }
 .ft-avatar svg, .ft-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.ft-champ .ft-avatar { box-shadow: 0 0 0 3px gold; position: relative; }
+.ft-champ .ft-avatar, .ft-avatar.ft-champ { box-shadow: 0 0 0 3px gold; position: relative; }
 .ft-crown { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 16px; }
 .ft-row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; }
 .ft-grow { flex: 1; }
@@ -2261,7 +2261,24 @@ import { readFileSync } from 'node:fs';
 import { APP_ID, ensure, list } from './snc.mjs';
 const theme = await ensure('sp_theme', 'name=Family Trivia', {
   name: 'Family Trivia', sys_scope: APP_ID, css_variables: '',
+});
+// sp_theme has no css field; theme CSS lives in sp_css, linked to the theme
+// via sp_css_include + m2m_sp_theme_css_include. theme.css is plain CSS, so
+// skip SCSS compilation and serve it raw via the record's .spcssdbx endpoint
+// (source=url include, same pattern as OOB ec-theme-lato-fonts) — the
+// source=local compile path serves empty for this scoped record.
+const css = await ensure('sp_css', 'name=Family Trivia Theme', {
+  name: 'Family Trivia Theme', sys_scope: APP_ID,
   css: readFileSync('src/portal/theme.css', 'utf8'),
+  turn_off_scss_compilation: 'true',
+});
+const inc = await ensure('sp_css_include', 'sp_css=' + css.sys_id, {
+  name: 'Family Trivia Theme', sp_css: css.sys_id, sys_scope: APP_ID,
+  source: 'url', url: '/' + css.sys_id + '.spcssdbx',
+});
+await ensure('m2m_sp_theme_css_include',
+  'sp_theme=' + theme.sys_id + '^sp_css_include=' + inc.sys_id, {
+  sp_theme: theme.sys_id, sp_css_include: inc.sys_id, order: 100, sys_scope: APP_ID,
 });
 const home = (await list('sp_page', 'id=ft_home', 'sys_id'))[0];
 await ensure('sp_portal', 'url_suffix=trivia', {
@@ -2446,8 +2463,10 @@ api.controller = function($scope, $sce) {
   // upload: file input -> canvas circle-crop to 256x256 jpeg -> attachment API
   c.upload = function(files) {
     if (!files || !files.length) return;
+    c.uploadError = '';
     var img = new Image();
     img.onload = function() {
+      URL.revokeObjectURL(img.src);
       var canvas = document.createElement('canvas');
       canvas.width = 256; canvas.height = 256;
       var ctx = canvas.getContext('2d');
@@ -2462,7 +2481,10 @@ api.controller = function($scope, $sce) {
           method: 'POST',
           headers: { 'X-UserToken': window.g_ck },
           body: fd
-        }).then(function() { c.save('upload'); });
+        }).then(function(res) {
+          if (res.ok) { c.save('upload'); }
+          else { $scope.$applyAsync(function() { c.uploadError = 'Upload failed (' + res.status + '). Please try again.'; }); }
+        });
       }, 'image/jpeg', 0.85);
     };
     img.src = URL.createObjectURL(files[0]);
@@ -2504,6 +2526,7 @@ api.controller = function($scope, $sce) {
     <button class="ft-btn ft-secondary" ng-if="c.data.hasSnPhoto" ng-click="c.save('sn_photo')">
       Use my ServiceNow photo
     </button>
+    <div class="ft-dim" ng-if="c.uploadError" style="color:#ff6b6b;margin-top:8px;">{{c.uploadError}}</div>
   </div>
   <a class="ft-btn ft-secondary" href="?id=ft_home" style="text-align:center;">← Home</a>
 </div>

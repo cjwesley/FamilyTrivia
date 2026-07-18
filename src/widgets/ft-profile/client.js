@@ -10,8 +10,10 @@ api.controller = function($scope, $sce) {
   // upload: file input -> canvas circle-crop to 256x256 jpeg -> attachment API
   c.upload = function(files) {
     if (!files || !files.length) return;
+    c.uploadError = '';
     var img = new Image();
     img.onload = function() {
+      URL.revokeObjectURL(img.src);
       var canvas = document.createElement('canvas');
       canvas.width = 256; canvas.height = 256;
       var ctx = canvas.getContext('2d');
@@ -26,7 +28,10 @@ api.controller = function($scope, $sce) {
           method: 'POST',
           headers: { 'X-UserToken': window.g_ck },
           body: fd
-        }).then(function() { c.save('upload'); });
+        }).then(function(res) {
+          if (res.ok) { c.save('upload'); }
+          else { $scope.$applyAsync(function() { c.uploadError = 'Upload failed (' + res.status + '). Please try again.'; }); }
+        });
       }, 'image/jpeg', 0.85);
     };
     img.src = URL.createObjectURL(files[0]);

@@ -30,6 +30,7 @@
     <button class="ft-btn ft-secondary" ng-if="c.data.hasSnPhoto" ng-click="c.save('sn_photo')">
       Use my ServiceNow photo
     </button>
+    <div class="ft-dim" ng-if="c.uploadError" style="color:#ff6b6b;margin-top:8px;">{{c.uploadError}}</div>
   </div>
   <a class="ft-btn ft-secondary" href="?id=ft_home" style="text-align:center;">← Home</a>
 </div>
