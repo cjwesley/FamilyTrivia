@@ -1,7 +1,8 @@
-// Family Trivia data model. All 13 tables for the trivia domain: content
+// Family Trivia data model. 16 tables for the trivia domain: content
 // (category, question, question_option, avatar), gameplay (game,
-// game_player, game_question, response), and player state (profile,
-// skill_rating, player_stats, player_category_stats, practice_session).
+// game_player, game_question, response), player state (profile,
+// skill_rating, player_stats, player_category_stats, practice_session),
+// and groups/self-registration (group, group_member, registration_log).
 // Idiom follows EmailOS/fluent/src/fluent/foundation.now.ts. Every column
 // is declared bare (no ownership prefix) because each table is new and
 // owned by this scope (see table-guide: new-table columns need no prefix).
@@ -102,6 +103,8 @@ export const x_tekvo_famtriv_game = Table({
         reveal_started_at: DateTimeColumn({ label: 'Reveal Started At' }),
         winner: ReferenceColumn({ label: 'Winner', referenceTable: 'sys_user' }),
         rolled_up: BooleanColumn({ label: 'Stats Rolled Up', default: false }),
+        group: ReferenceColumn({ label: 'Group', referenceTable: 'x_tekvo_famtriv_group' }),
+        invite_token: StringColumn({ label: 'Invite Token', maxLength: 40 }),
     },
     allowWebServiceAccess: true,
 })
@@ -205,6 +208,7 @@ export const x_tekvo_famtriv_player_stats = Table({
         total_correct: IntegerColumn({ label: 'Total Correct', default: 0 }),
         longest_win_streak: IntegerColumn({ label: 'Longest Win Streak', default: 0 }),
         current_win_streak: IntegerColumn({ label: 'Current Win Streak', default: 0 }),
+        group: ReferenceColumn({ label: 'Group', referenceTable: 'x_tekvo_famtriv_group' }),
     },
     allowWebServiceAccess: true,
 })
@@ -216,6 +220,7 @@ export const x_tekvo_famtriv_player_category_stats = Table({
         user: ReferenceColumn({ label: 'User', referenceTable: 'sys_user' }),
         category: ReferenceColumn({ label: 'Category', referenceTable: 'x_tekvo_famtriv_category' }),
         correct_count: IntegerColumn({ label: 'Correct Count', default: 0 }),
+        group: ReferenceColumn({ label: 'Group', referenceTable: 'x_tekvo_famtriv_group' }),
     },
     allowWebServiceAccess: true,
 })
@@ -229,6 +234,40 @@ export const x_tekvo_famtriv_practice_session = Table({
         question_count: IntegerColumn({ label: 'Questions Answered', default: 0 }),
         correct_count: IntegerColumn({ label: 'Correct', default: 0 }),
         accuracy: DecimalColumn({ label: 'Accuracy (0-1)', default: 0 }),
+    },
+    allowWebServiceAccess: true,
+})
+
+export const x_tekvo_famtriv_group = Table({
+    name: 'x_tekvo_famtriv_group',
+    label: 'Trivia Group',
+    display: 'name',
+    schema: {
+        name: StringColumn({ label: 'Name', maxLength: 80 }),
+        owner: ReferenceColumn({ label: 'Owner', referenceTable: 'sys_user' }),
+        active: BooleanColumn({ label: 'Active', default: true }),
+    },
+    allowWebServiceAccess: true,
+})
+
+export const x_tekvo_famtriv_group_member = Table({
+    name: 'x_tekvo_famtriv_group_member',
+    label: 'Group Member',
+    schema: {
+        group: ReferenceColumn({ label: 'Group', referenceTable: 'x_tekvo_famtriv_group' }),
+        user: ReferenceColumn({ label: 'User', referenceTable: 'sys_user' }),
+        joined_on: DateTimeColumn({ label: 'Joined On' }),
+    },
+    allowWebServiceAccess: true,
+})
+
+export const x_tekvo_famtriv_registration_log = Table({
+    name: 'x_tekvo_famtriv_registration_log',
+    label: 'Registration Log',
+    schema: {
+        user: ReferenceColumn({ label: 'User', referenceTable: 'sys_user' }),
+        game: ReferenceColumn({ label: 'Game', referenceTable: 'x_tekvo_famtriv_game' }),
+        ip: StringColumn({ label: 'IP Address', maxLength: 64 }),
     },
     allowWebServiceAccess: true,
 })

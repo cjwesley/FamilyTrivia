@@ -4,7 +4,7 @@
 import { SCOPE, insert, del } from './snc.mjs';
 const TABLES = ['category', 'question', 'question_option', 'avatar', 'profile', 'game',
   'game_player', 'game_question', 'response', 'skill_rating', 'player_stats',
-  'player_category_stats', 'practice_session'];
+  'player_category_stats', 'practice_session', 'group', 'group_member', 'registration_log'];
 for (const t of TABLES) {
   const rec = await insert(`${SCOPE}_${t}`, {});
   await del(`${SCOPE}_${t}`, rec.sys_id);
