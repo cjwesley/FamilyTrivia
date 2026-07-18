@@ -135,6 +135,22 @@ export const TriviaProfile = ScriptInclude({
     accessibleFrom: 'package_private',
 })
 
+export const TriviaGroupsTest = ScriptInclude({
+    $id: Now.ID['trivia_groups_test_si'],
+    name: 'TriviaGroupsTest',
+    script: Now.include('../server/TriviaGroupsTest.server.js'),
+    description: 'Tests for TriviaGroups membership service.',
+    accessibleFrom: 'package_private',
+})
+
+export const TriviaGroups = ScriptInclude({
+    $id: Now.ID['trivia_groups_si'],
+    name: 'TriviaGroups',
+    script: Now.include('../server/TriviaGroups.server.js'),
+    description: 'Group membership service: userGroups/isMember/ensureMember/newToken.',
+    accessibleFrom: 'package_private',
+})
+
 export const TriviaE2ETest = ScriptInclude({
     $id: Now.ID['trivia_e2e_test_si'],
     name: 'TriviaE2ETest',

@@ -10,6 +10,7 @@ TriviaTestRunner.prototype = {
       new TriviaEngineTest(),
       new TriviaStatsTest(),
       new TriviaPracticeTest(),
+      new TriviaGroupsTest(),
       new TriviaE2ETest()
     ];
   },
