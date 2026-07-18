@@ -2,11 +2,11 @@ var TriviaStats = Class.create();
 TriviaStats.prototype = {
   initialize: function() { this.scope = gs.getCurrentScopeName(); },
 
-  _statsRow: function(userId) {
+  _statsRow: function(userId, groupId) {
     var st = new GlideRecord(this.scope + '_player_stats');
-    st.addQuery('user', userId); st.query();
+    st.addQuery('user', userId); st.addQuery('group', groupId); st.query();
     if (!st.next()) {
-      st.initialize(); st.setValue('user', userId);
+      st.initialize(); st.setValue('user', userId); st.setValue('group', groupId);
       st.setValue('total_wins', 0); st.setValue('total_points', 0); st.setValue('total_correct', 0);
       st.setValue('longest_win_streak', 0); st.setValue('current_win_streak', 0);
       st.insert(); st.get(st.getUniqueValue());
@@ -18,12 +18,17 @@ TriviaStats.prototype = {
   rollupGame: function(gameId) {
     var g = new GlideRecord(this.scope + '_game');
     if (!g.get(gameId) || g.getValue('rolled_up') === '1' || g.getValue('rolled_up') === 'true') return;
+    var groupId = g.getValue('group');
+    if (!groupId) {
+      gs.warn('TriviaStats.rollupGame: game ' + gameId + ' has no group; skipping rollup');
+      return;
+    }
     var winner = g.getValue('winner');
     var p = new GlideRecord(this.scope + '_game_player');
     p.addQuery('game', gameId); p.query();
     while (p.next()) {
       var userId = p.getValue('user');
-      var st = this._statsRow(userId);
+      var st = this._statsRow(userId, groupId);
       st.setValue('total_points', this._int(st, 'total_points') + this._int(p, 'score'));
       st.setValue('total_correct', this._int(st, 'total_correct') + this._int(p, 'correct_count'));
       if (userId === winner) {
@@ -49,9 +54,9 @@ TriviaStats.prototype = {
       }
       for (var cat2 in perCat) {
         var cs = new GlideRecord(this.scope + '_player_category_stats');
-        cs.addQuery('user', userId); cs.addQuery('category', cat2); cs.query();
+        cs.addQuery('user', userId); cs.addQuery('group', groupId); cs.addQuery('category', cat2); cs.query();
         if (!cs.next()) {
-          cs.initialize(); cs.setValue('user', userId); cs.setValue('category', cat2);
+          cs.initialize(); cs.setValue('user', userId); cs.setValue('group', groupId); cs.setValue('category', cat2);
           cs.setValue('correct_count', 0); cs.insert(); cs.get(cs.getUniqueValue());
         }
         cs.setValue('correct_count', this._int(cs, 'correct_count') + perCat[cat2]);
@@ -62,10 +67,10 @@ TriviaStats.prototype = {
     g.update();
   },
 
-  leaderboard: function() {
+  leaderboard: function(groupId) {
     var rows = [];
     var st = new GlideRecord(this.scope + '_player_stats');
-    st.query();
+    st.addQuery('group', groupId); st.query();
     while (st.next()) rows.push({
       userId: st.getValue('user'),
       wins: this._int(st, 'total_wins'), points: this._int(st, 'total_points'),
@@ -75,6 +80,7 @@ TriviaStats.prototype = {
     });
     var byCategory = {};
     var cs = new GlideRecord(this.scope + '_player_category_stats');
+    cs.addQuery('group', groupId);
     cs.orderByDesc('correct_count'); cs.query();
     while (cs.next()) {
       var cat = cs.getValue('category');
