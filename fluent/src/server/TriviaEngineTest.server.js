@@ -1,6 +1,26 @@
 var TriviaEngineTest = Class.create();
 TriviaEngineTest.prototype = Object.extendsObject(TriviaTestBase, {
   _scope: function() { return gs.getCurrentScopeName(); },
+  // Astral (4-byte) emoji must round-trip through the icon field without the
+  // platform's FDD6/FDD7+base64 fallback encoding (requires a text-typed column).
+  testCategoryIconRoundTrip: function() {
+    var s = this._scope();
+    var brain = String.fromCodePoint(0x1F9E0);
+    var c = new GlideRecord(s + '_category');
+    c.initialize(); c.setValue('name', 'ZZ IconProbe'); c.setValue('icon', brain);
+    c.setValue('active', false);
+    var id = c.insert();
+    try {
+      var back = new GlideRecord(s + '_category');
+      back.get(id);
+      var icon = back.getValue('icon') || '';
+      this.assert(icon.indexOf('﷖') === -1, 'icon not stored via FDD6 fallback encoding');
+      this.assert(icon.indexOf(brain) !== -1, 'icon round-trips the emoji intact');
+    } finally {
+      var del = new GlideRecord(s + '_category');
+      if (del.get(id)) del.deleteRecord();
+    }
+  },
   _ensureTestUser: function(suffix) {
     var gr = new GlideRecord('sys_user');
     gr.addQuery('user_name', 'famtriv.test.' + suffix); gr.query();

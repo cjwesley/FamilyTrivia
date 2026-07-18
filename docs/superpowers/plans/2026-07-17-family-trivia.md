@@ -282,7 +282,7 @@ git commit -m "feat: Family Trivia app and roles via Fluent SDK"
 ```json
 { "name": "category", "label": "Trivia Category", "fields": [
   { "element": "name", "label": "Name", "type": "string", "max_length": 80 },
-  { "element": "icon", "label": "Icon (emoji)", "type": "string", "max_length": 8 },
+  { "element": "icon", "label": "Icon (emoji)", "type": "string", "max_length": 1024 },
   { "element": "color", "label": "Color (hex)", "type": "string", "max_length": 9 },
   { "element": "active", "label": "Active", "type": "boolean", "default": true },
   { "element": "otdb_id", "label": "OTDB Category ID", "type": "integer" }
@@ -370,7 +370,7 @@ git commit -m "feat: Family Trivia app and roles via Fluent SDK"
 ```json
 { "name": "profile", "label": "Player Profile", "fields": [
   { "element": "user", "label": "User", "type": "reference", "reference": "sys_user" },
-  { "element": "nickname", "label": "Nickname", "type": "string", "max_length": 40 },
+  { "element": "nickname", "label": "Nickname", "type": "string", "max_length": 1024 },
   { "element": "avatar_source", "label": "Avatar Source", "type": "choice", "choices": [["gallery", "Gallery"], ["upload", "Upload"], ["sn_photo", "ServiceNow Photo"]] },
   { "element": "avatar", "label": "Gallery Avatar", "type": "reference", "reference": "@scope@_avatar" },
   { "element": "skill_overrides", "label": "Skill Overrides (JSON catId->1..5)", "type": "string", "max_length": 1024 }

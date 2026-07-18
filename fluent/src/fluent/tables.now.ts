@@ -22,7 +22,9 @@ export const x_tekvo_famtriv_category = Table({
     display: 'name',
     schema: {
         name: StringColumn({ label: 'Name', maxLength: 80 }),
-        icon: StringColumn({ label: 'Icon (emoji)', maxLength: 8 }),
+        // 1024 not 8: string columns <=255 chars land in utf8mb3 varchar storage, where
+        // 4-byte emoji get mangled into FDD6/FDD7+base64; longer columns store them natively
+        icon: StringColumn({ label: 'Icon (emoji)', maxLength: 1024 }),
         color: StringColumn({ label: 'Color (hex)', maxLength: 9 }),
         active: BooleanColumn({ label: 'Active', default: true }),
         otdb_id: IntegerColumn({ label: 'OTDB Category ID' }),
@@ -165,7 +167,8 @@ export const x_tekvo_famtriv_profile = Table({
     label: 'Player Profile',
     schema: {
         user: ReferenceColumn({ label: 'User', referenceTable: 'sys_user' }),
-        nickname: StringColumn({ label: 'Nickname', maxLength: 40 }),
+        // 1024 for emoji-safe storage (see icon column note); app logic still caps at 40 chars
+        nickname: StringColumn({ label: 'Nickname', maxLength: 1024 }),
         avatar_source: ChoiceColumn({
             label: 'Avatar Source',
             choices: {
