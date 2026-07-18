@@ -5,6 +5,15 @@ a ServiceNow scoped app (`x_tekvo_famtriv`) on `https://tekvoyantdev.service-now
 Play from phones at **`/trivia`**: 4-char join codes, uniform or per-player
 adaptive-difficulty modes, solo practice, avatars, leaderboards, a champion banner.
 
+## Want this without ServiceNow?
+
+Everything you need to rebuild the game on any backend lives in
+[`fork-kit/`](fork-kit/): a backend-neutral spec (data model, rules engine,
+API contract, security invariants) with a worked Supabase + React reference
+architecture, plus 610 ready-to-seed questions and the full design system.
+Start at [`fork-kit/README.md`](fork-kit/README.md) — no ServiceNow knowledge
+required. (Question data is CC BY-SA 4.0; see `fork-kit/data/ATTRIBUTION.md`.)
+
 ## Architecture
 
 The repo is the source of truth; nothing is hand-authored in the instance UI.
