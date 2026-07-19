@@ -25,8 +25,15 @@ api.controller = function($scope, $interval, $timeout, $sce, spUtil) {
       .then(function(r) { apply(r); busy = false; }, function() { busy = false; });
   };
 
-  // trigger 1: record watch on this game record
-  spUtil.recordWatch($scope, c.data.gameTable, 'sys_id=' + c.data.gameId, function() { c.refresh(); });
+  // trigger 1: record watch on this game record. recordWatch availability varies
+  // by instance (AMB/plugin config) and a synchronous throw here would abort the
+  // whole controller and blank the widget - the 3s poll below must always carry
+  // the game on its own, so failures are logged and swallowed.
+  try {
+    spUtil.recordWatch($scope, c.data.gameTable, 'sys_id=' + c.data.gameId, function() { c.refresh(); });
+  } catch (e) {
+    console.error('ft-game: recordWatch unavailable, relying on 3s poll', e);
+  }
   // trigger 2: 3s poll fallback
   var poll = $interval(c.refresh, 3000);
   // trigger 3: 1s local countdown + one-shot tick when expired
