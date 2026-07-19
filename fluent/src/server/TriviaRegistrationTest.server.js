@@ -15,7 +15,10 @@ TriviaRegistrationTest.prototype = Object.extendsObject(TriviaTestBase, {
   // created below are cleaned up, in _cleanupSeed.
   _seedLobbyGame: function(tag) {
     var s = this._scope();
-    var ownerId = this._ensureTestUser('regOwn' + tag);
+    // strip the per-run hex from the user suffix: groups/games/emails need
+    // run-unique tags, but owner ACCOUNTS must reuse fixed names or every
+    // suite run leaks new sys_user rows (regOwnHappy<hex>, ...)
+    var ownerId = this._ensureTestUser('regOwn' + tag.replace(/[0-9a-f]{6}$/, ''));
     var grp = new GlideRecord(s + '_group');
     grp.initialize();
     grp.setValue('name', 'ZZ RegGrp ' + tag);
