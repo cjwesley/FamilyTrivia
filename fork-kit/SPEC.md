@@ -105,11 +105,11 @@ Sort players by: score DESC, then correct_count DESC, then answer_time_total_ms 
 
 ### 3.6 Timing: the tick contract
 
-There is no server-side scheduler for round timing. Any client may call an idempotent `tick(game)` operation at any time; the server checks the clock and applies at most one transition:
+There is no server-side scheduler for round timing. **The server applies the tick check lazily at the top of every `getState` read**, so ordinary polling drives round progression without any client cooperation — this is load-bearing, not an optimization (a round with an absent player would otherwise hang on client heroics; learned in live play). Additionally, any client may call an idempotent `tick(game)` operation at any time; the server checks the clock and applies at most one transition:
 - `in_question` and `now > question_started_at + seconds_per_question + 2000ms` → close the round (missing answers simply score 0; the game NEVER blocks on an absent player).
 - `reveal` and `now > reveal_started_at + 8000ms` → advance (any client's tick works — the game survives the host pocketing their phone).
 
-Clients: run a local countdown from the server-stamped deadline, correcting for client-server clock skew (`skew = client_now − server_now` captured on every state fetch); fire ONE tick when the local countdown expires; additionally nudge tick every ~9s during reveal.
+Clients: run a local countdown from the server-stamped deadline, correcting for client-server clock skew (`skew = client_now − server_now` captured on every state fetch); fire ticks only after the server grace window has certainly passed (countdown + grace + margin), re-armed every ~3s while the round remains open (never a one-shot - a single lost tick must not matter); additionally nudge tick every ~9s during reveal.
 
 ### 3.7 Stats rollup (on finish, exactly once)
 

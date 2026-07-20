@@ -9,14 +9,14 @@ api.controller = function($scope, $interval, $timeout, $sce, spUtil) {
   c.remaining = 0;
   c.pct = 100;
   var clockSkew = Date.now() - c.st.serverNow; // client clock - server clock
-  var tickSent = false;
+  var lastTickAt = 0;
   var busy = false;
 
   function apply(result) {
     c.st = result.data.state;
     c.cards = result.data.cards || c.cards;
     clockSkew = Date.now() - c.st.serverNow;
-    if (c.st.state !== 'in_question') { c.selected = ''; tickSent = false; }
+    if (c.st.state !== 'in_question') { c.selected = ''; c.answerNote = ''; lastTickAt = 0; }
   }
   c.refresh = function() {
     if (busy) return;
@@ -42,8 +42,12 @@ api.controller = function($scope, $interval, $timeout, $sce, spUtil) {
     var msLeft = c.st.endsAt - (Date.now() - clockSkew);
     c.remaining = Math.max(0, Math.ceil(msLeft / 1000));
     c.pct = Math.max(0, Math.min(100, msLeft / (c.st.secondsPerQuestion * 10)));
-    if (msLeft <= -500 && !tickSent) {
-      tickSent = true;
+    // Nudge the server clock only after its 2s grace window has certainly
+    // passed, and RE-ARM every 3s rather than firing once: a single lost or
+    // too-early tick must never strand the round (tick is idempotent, and
+    // getState also lazily ticks server-side - this is defense in depth).
+    if (msLeft <= -2500 && Date.now() - lastTickAt >= 3000) {
+      lastTickAt = Date.now();
       c.server.get({ action: 'tick', gameId: c.data.gameId }).then(apply);
     }
   }, 250);
@@ -63,9 +67,18 @@ api.controller = function($scope, $interval, $timeout, $sce, spUtil) {
   c.answer = function(optionId) {
     if (c.selected || c.st.answered) return;
     c.selected = optionId;
+    c.answerNote = '';
     var clientMs = c.st.secondsPerQuestion * 1000 - (c.st.endsAt - (Date.now() - clockSkew));
     c.server.get({ action: 'answer', gameId: c.data.gameId, optionId: optionId, clientMs: Math.round(clientMs) })
-      .then(apply);
+      .then(function(r) {
+        // A rejected answer must not masquerade as "locked in" - unlock and say why.
+        var res = r.data && r.data.result;
+        if (res && res.accepted === false && res.reason !== 'already answered') {
+          c.selected = '';
+          c.answerNote = "That answer didn't count (" + (res.reason || 'error') + ')';
+        }
+        apply(r);
+      });
   };
   c.next = function() {
     c.server.get({ action: 'advance', gameId: c.data.gameId }).then(apply);

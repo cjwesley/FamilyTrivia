@@ -154,6 +154,24 @@ TriviaEngineTest.prototype = Object.extendsObject(TriviaTestBase, {
       this.assertEqual(eng.champion(seed.groupId).userId, a, 'champion is A');
     } finally { this._cleanup(seed.catId, seed.groupId); }
   },
+  // Round progression must never depend on a client explicitly calling tick():
+  // any state read (every player's 3s poll) must lazily close an expired round.
+  // Regression for the 2026-07-20 live-game hang (clients burned their one-shot
+  // tick inside the server's 2s grace window and rounds stuck at 0s forever).
+  testGetStateClosesExpiredRound: function() {
+    var seed = this._seed('L');
+    var a = seed.ownerId, b = this._ensureTestUser('engLazy');
+    try {
+      var eng = new TriviaEngine();
+      var made = eng.createGame(a, { mode: 'uniform', categories: [seed.catId], questionCount: 1, secondsPerQuestion: 20, groupId: seed.groupId });
+      eng.joinGame(b, made.code);
+      eng.startGame(made.gameId, a);
+      this._backdateQuestionStart(made.gameId, 30);
+      // NO tick call - a plain state read must close the expired round
+      var st = eng.getState(made.gameId, a);
+      this.assertEqual(st.state, 'reveal', 'getState lazily closed the expired round');
+    } finally { this._cleanup(seed.catId, seed.groupId); }
+  },
   testTickClosesExpiredQuestion: function() {
     var seed = this._seed('T');
     var a = seed.ownerId;

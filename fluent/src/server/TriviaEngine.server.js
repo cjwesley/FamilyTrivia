@@ -295,6 +295,10 @@ TriviaEngine.prototype = {
   },
 
   getState: function(gameId, userId) {
+    // Lazy clock: every state read applies any due transition first, so the
+    // players' regular polls drive round progression even if no client ever
+    // calls tick explicitly. tick() is idempotent and cheap.
+    this.tick(gameId);
     var g = this._game(gameId);
     if (!g) return { error: 'no such game' };
     var state = g.getValue('state');

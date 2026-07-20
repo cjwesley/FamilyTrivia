@@ -44,6 +44,7 @@
       <div style="font-size:20px;font-weight:700;margin-top:6px;">{{c.st.question.text}}</div>
     </div>
     <div ng-if="!c.st.answered && !c.selected">
+      <div class="ft-dim" style="color:var(--ft-red);" ng-if="c.answerNote">{{c.answerNote}}</div>
       <button class="ft-btn ft-option" ng-repeat="o in c.st.question.options"
               ng-click="c.answer(o.id)">{{o.text}}</button>
     </div>
