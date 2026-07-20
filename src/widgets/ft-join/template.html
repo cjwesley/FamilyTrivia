@@ -24,9 +24,9 @@
     </div>
 
     <div class="ft-card" ng-if="c.registered" style="text-align:center;">
-      <div style="font-size:40px;">✅</div>
-      <div style="font-weight:700;margin-top:6px;">Account created — log in to join the game</div>
-      <a class="ft-btn" style="margin-top:12px;" ng-href="{{c.loginUrl}}">Log in</a>
+      <div class="ft-pop" style="font-size:40px;">✅</div>
+      <div style="font-weight:700;margin-top:6px;">Account created — taking you to the game…</div>
+      <div class="ft-dim" style="margin-top:6px;">Not moving? <a ng-href="{{c.loginUrl}}">Log in to join</a></div>
     </div>
 
     <div class="ft-card" ng-if="!c.registered">

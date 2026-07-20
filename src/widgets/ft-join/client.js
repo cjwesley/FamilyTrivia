@@ -49,12 +49,38 @@ api.controller = function($scope, $window) {
     }).then(function(res) {
       return res.json();
     }).then(function(r) {
-      $scope.$apply(function() {
-        c.busy = false;
+      if (r.ok) {
+        // Auto-login: the visitor's own browser re-submits the credentials
+        // they just typed to the instance's standard login endpoint (same
+        // origin, one POST), then navigates to the protected join URL.
+        // If the login stuck, they land straight in the game; if the
+        // instance rejected it, the protected page shows the normal login
+        // - identical to the old manual flow. Either way we navigate, so
+        // no response parsing and no credential retention: both fields are
+        // cleared the moment the POST is dispatched.
+        var creds = new URLSearchParams();
+        creds.append('user_name', body.email.trim().toLowerCase());
+        creds.append('user_password', c.form.password || body.password);
+        creds.append('sys_action', 'sysverb_login');
+        creds.append('ni.nolog.user_password', 'true');
+        body.password = '';
         c.form.password = '';
-        if (r.ok) c.registered = true;
-        else c.err = c.reasonMessage(r.reason);
-      });
+        $scope.$apply(function() { c.registered = true; c.busy = true; });
+        fetch('/login.do', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: creds.toString(),
+          credentials: 'same-origin'
+        }).catch(function() { /* fallback below still routes via login page */ })
+          .then(function() { $window.location.href = c.loginUrl; });
+      } else {
+        $scope.$apply(function() {
+          c.busy = false;
+          body.password = '';
+          c.form.password = '';
+          c.err = c.reasonMessage(r.reason);
+        });
+      }
     }).catch(function() {
       $scope.$apply(function() {
         c.busy = false;
