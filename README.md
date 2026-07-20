@@ -86,7 +86,7 @@ cd fluent && npm run build && npm run deploy && cd ..
 node tools/run-tests.mjs
 ```
 
-Expected: `10 suites / 38 tests`, all `PASS`, exit `0` (`TriviaHarnessTest`,
+Expected: `10 suites / 39 tests`, all `PASS`, exit `0` (`TriviaHarnessTest`,
 `TriviaScoringTest`, `TriviaSkillTest`, `TriviaSelectorTest`,
 `TriviaEngineTest`, `TriviaStatsTest`, `TriviaPracticeTest`,
 `TriviaGroupsTest`, `TriviaRegistrationTest`, `TriviaE2ETest`). TDD loop:
