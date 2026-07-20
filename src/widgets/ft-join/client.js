@@ -2,8 +2,12 @@ api.controller = function($scope, $window) {
   var c = this;
   c.data = $scope.data;
   c.token = c.data.token;
-  c.loginUrl = '/login.do?sysparm_goto_url=' +
-    encodeURIComponent('/trivia?id=ft_join&t=' + c.token);
+  // Login goes through the PROTECTED twin of this page (ft_join_go, same
+  // widget, public=false): an unauthenticated hit there makes the platform
+  // capture nav_to and return here after login. /login.do?sysparm_goto_url
+  // is NOT used - this instance ignores it for post-login routing (verified
+  // live 2026-07-20: new users landed on the ServiceNow app page).
+  c.loginUrl = '/trivia?id=ft_join_go&t=' + encodeURIComponent(c.token);
 
   // Registration form state. Never prefilled from server data, never
   // interpolated back into the template -- ng-model only, cleared right
